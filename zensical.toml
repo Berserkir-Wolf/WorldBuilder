@@ -1,21 +1,19 @@
 [project]
-site_url = "https://www.example.com/"
-site_name = "Documentation"
-# site_description = "Your project description"
-# site_author = "Your name"
-
-# copyright = "Copyright &copy; 2026 Your name"
-
-# repo_url = "https://github.com/user/repo"
-# repo_name = "user/repo"
-# edit_uri = "edit/main/docs/"
+site_url = "https://berserkir-wolf.github.io/WorldBuilder/"
+site_name = "WorldBuilder Docs"
+site_description = "The official guide for WorldBuilder, the ultimate tool for creating immersive worlds and stories. Explore our comprehensive documentation to unlock the full potential of your creative endeavours."
+site_author = "Berserkir-Wolf"
+copyright = "Copyright &copy; 2026 Your name"
+repo_url = "https://github.com/Berserkir-Wolf/WorldBuilder"
+repo_name = "Berserkir-Wolf/WorldBuilder"
+# edit_uri = "edit/development/docs/"
 
 nav = [
   { "Get started" = "index.md" },
   { "Markdown in 5min" = "markdown.md" },
 ]
 
-# extra_css = ["stylesheets/extra.css"]
+extra_css = ["stylesheets/extra.css"]
 # extra_javascript = ["javascripts/extra.js"]
 
 [project.theme]
