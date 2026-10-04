@@ -92,10 +92,10 @@ markdown_extensions:
 # mkdocs function extensions
 plugins:
   - search
-  - git-revision-date-localized:
-      type: timeago
-      locale: en
-      fallback_to_build_date: false
+  #- git-revision-date-localized:
+  #    type: timeago
+  #    locale: en
+  #    fallback_to_build_date: false
   - redirects: # Pretty URLs (links with nav)
       redirect_maps:
         # Guides redirects
