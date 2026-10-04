@@ -3,14 +3,20 @@ site_url = "https://berserkir-wolf.github.io/WorldBuilder/"
 site_name = "WorldBuilder Docs"
 site_description = "The official guide for WorldBuilder, the ultimate tool for creating immersive worlds and stories. Explore our comprehensive documentation to unlock the full potential of your creative endeavours."
 site_author = "Berserkir-Wolf"
-copyright = "Copyright &copy; 2026 Your name"
+copyright = "Copyright &copy; 2026 Berserkir-Wolf. All rights reserved."
 repo_url = "https://github.com/Berserkir-Wolf/WorldBuilder"
 repo_name = "Berserkir-Wolf/WorldBuilder"
 # edit_uri = "edit/development/docs/"
 
 nav = [
   { "Get started" = "index.md" },
-  { "Markdown in 5min" = "markdown.md" },
+  { "Guides" = [
+    { "Installation" = "guides/installation.md" }
+  ]},
+  { "Reference" = [
+    { "Markdown in 5min" = "reference/markdown-reference.md" },
+    { "Zensical Reference" = "reference/zensical-reference.md" },
+  ]},
 ]
 
 extra_css = ["stylesheets/extra.css"]
