@@ -1,0 +1,22 @@
+{
+    "markdownlint.config": {
+        "default": true,
+        "code-block-style": { "style": "consistent" },
+        "ol-prefix": { "style": "one_or_ordered" },
+        "MD034": false,
+        "MD046": false,
+        "no-inline-html": { "allowed_elements": ["br"]},
+        "emphasis-style": { "style": "underscore" },
+        "strong-style": { "style": "asterisk"},
+        "ul-style": { "style": "dash" },
+        "whitespace": false
+    },
+    "cSpell.allowCompoundWords": true,
+    "cSpell.language": "en-GB",
+    "cSpell.words": [
+        "abbr",
+        "mkdocs",
+        "mklink"
+    ],
+    "editor.detectIndentation": false
+}
