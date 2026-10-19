@@ -37,10 +37,25 @@ services:
     ports:
       - "8080:3000"
     environment:
-      DATABASE_FILE: /app/data/worldbuilder.db
+      DATABASE_URL: file:/app/data/worldbuilder.db
+      BASE_URL: /
     volumes:
       - ./app/data:/app/data
 ```
+
+`BASE_URL` controls the path where the application is mounted. Use `/` for a direct local deployment, or set it to a path such as `/worldbuilder` when the application is behind a reverse proxy. An absolute URL is also accepted; its path component is used for routing.
+
+### Database migrations
+
+The application stores the current database version in the `dbversion` row of `applicationsettings`. On startup, Prisma synchronizes the models, seeds missing baseline data, and applies pending application migrations in `app/web-app/prisma/migrate.js`.
+
+To add a future migration:
+
+1. Add a migration entry with the next version and its `up` function.
+2. Increase `currentDatabaseVersion` in `app/web-app/prisma/migrate.js`.
+3. Update `schema.prisma` if the migration changes the data model.
+
+Migrations are applied in version order, and `dbversion` is updated only after each migration succeeds.
 
 ### Node.js
 
