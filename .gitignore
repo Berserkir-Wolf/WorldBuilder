@@ -70,3 +70,4 @@ site/
 
 # Visual Studio files
 .vs/
+/app/data/worldbuilder.db
