@@ -6,5 +6,6 @@ services:
       - "8080:3000"
     environment:
       DATABASE_FILE: /app/data/worldbuilder.db
+      UPLOAD_FOLDER: /app/data/uploads
     volumes:
       - ./app/data:/app/data
