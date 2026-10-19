@@ -1,14 +1,14 @@
 FROM node:20-alpine
 
-# Install build tools required to compile the native sqlite3 library on Alpine Linux
-RUN apk add --no-cache python3 make g++
-
 WORKDIR /app
 
-COPY package*.json ./
+COPY app/web-app/package*.json ./
 RUN npm install
 
-COPY . .
+COPY app/web-app/prisma ./prisma
+RUN npx prisma generate
+
+COPY app/web-app/. .
 
 EXPOSE 3000
 
