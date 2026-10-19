@@ -2,9 +2,9 @@
 name: Build and Push Docker Image
 
 on:
-  push:
-    branches:
-      - main
+  release:
+    types:
+      - published
   workflow_dispatch:
 
 permissions:
@@ -37,6 +37,7 @@ jobs:
           images: ${{ env.IMAGE_NAME }}
           tags: |
             type=raw,value=latest
+            type=raw,value=${{ github.event.release.tag_name || 'manual' }}
             type=sha,format=short
 
       - name: Build and push image
