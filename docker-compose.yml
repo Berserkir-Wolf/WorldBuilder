@@ -1,0 +1,10 @@
+services:
+  web:
+    build:
+      context: ./app/web-app
+    ports:
+      - "8080:3000"
+    environment:
+      DATABASE_FILE: /app/data/worldbuilder.db
+    volumes:
+      - ./app/data:/app/data
