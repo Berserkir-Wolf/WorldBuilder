@@ -65,5 +65,8 @@ target/
 venv/
 ENV/
 
-# MkDocs documentation
+# MkDocs documentation (local testing)
 site/
+
+# Visual Studio files
+.vs/
