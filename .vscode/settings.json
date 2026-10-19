@@ -15,8 +15,12 @@
     "cSpell.language": "en-GB",
     "cSpell.words": [
         "abbr",
+        "Berserkir",
+        "inlinehilite",
         "mkdocs",
-        "mklink"
+        "mklink",
+        "pygments",
+        "TTRPG"
     ],
     "editor.detectIndentation": false
 }

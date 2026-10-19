@@ -1,0 +1,6 @@
+**
+!app/
+!app/web-app/
+!app/web-app/**
+app/data/worldbuilder.db
+docs/

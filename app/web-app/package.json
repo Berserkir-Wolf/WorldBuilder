@@ -1,0 +1,17 @@
+{
+  "name": "WorldBuilder",
+  "version": "1.0.0",
+  "main": "server.js",
+  "file_function": "This is the package.json file for the Docker web application. It defines the application's metadata, scripts, and dependencies.",
+  "scripts": {
+    "start": "prisma db push && npm run prisma:seed && npm run prisma:migrate && node server.js",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "node prisma/migrate.js",
+    "prisma:seed": "node prisma/seed.js"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.16.0",
+    "express": "^4.19.2",
+    "prisma": "^6.16.0"
+  }
+}

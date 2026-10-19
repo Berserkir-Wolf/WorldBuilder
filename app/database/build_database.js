@@ -5,12 +5,22 @@ const db = new sqlite3.Database('./app_database.db');
 
 // Create a table (if it doesn't exist)
 db.serialize(() => {
+  // Create tables
+  db.run("CREATE TABLE IF NOT EXISTS applicationsettings (id INTEGER PRIMARY KEY AUTOINCREMENT, setting_name TEXT, setting_value TEXT)");
+  db.run("CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT, password TEXT)");
   db.run("CREATE TABLE IF NOT EXISTS locations (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, description TEXT, parent_location INT)");
   db.run("CREATE TABLE IF NOT EXISTS characters (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, type TEXT, role TEXT, location INT)");
   db.run("CREATE TABLE IF NOT EXISTS characterdetails (id INTEGER PRIMARY KEY AUTOINCREMENT, character_id INT, charisma INT, intelligence INT, wisdom INT, dexterity INT, constitution INT, strength INT, race TEXT, class TEXT, level INT, alignment TEXT)");
   db.run("CREATE TABLE IF NOT EXISTS reputation (id INTEGER PRIMARY KEY AUTOINCREMENT, character_ID INT, target_ID INT, adjustment INT, note TEXT)");
 
   // Add some data
+
+  const buildsettings = db.prepare("INSERT INTO applicationsettings VALUES (NULL, ?, ?)");
+  buildsettings.run('dbversion', '1.0.0');
+  buildsettings.run('appname', 'My Application');
+  buildsettings.run('appversion', '1.0.0');
+  buildsettings.finalize();
+
   const buildlocations = db.prepare("INSERT INTO locations VALUES (NULL, ?, ?, ?)");
   buildlocations.run('Waterdeep', 'The capital city of the North.', null);
   buildlocations.run('Town Square', 'The central hub of the town, bustling with activity.', '1');

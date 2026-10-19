@@ -1,0 +1,13 @@
+services:
+  web:
+    build:
+      context: .
+      dockerfile: app/web-app/dockerfile
+    ports:
+      - "8080:3000"
+    environment:
+      DATABASE_URL: file:/app/data/worldbuilder.db
+      BASE_URL: /
+      UPLOAD_FOLDER: /app/data/uploads
+    volumes:
+      - ./app/data:/app/data
