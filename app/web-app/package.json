@@ -4,6 +4,7 @@
   "main": "server.js",
   "file_function": "This is the package.json file for the Docker web application. It defines the application's metadata, scripts, and dependencies.",
   "scripts": {
+    "build": "vite build",
     "start": "prisma db push && npm run prisma:seed && npm run prisma:migrate && node server.js",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "node prisma/migrate.js",
@@ -11,7 +12,15 @@
   },
   "dependencies": {
     "@prisma/client": "^6.16.0",
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.0",
+    "@mui/icons-material": "^6.4.8",
+    "@mui/material": "^6.4.8",
     "express": "^4.19.2",
-    "prisma": "^6.16.0"
+    "prisma": "^6.16.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "vite": "^6.1.0",
+    "@vitejs/plugin-react": "^4.3.4"
   }
 }
