@@ -5,6 +5,7 @@
   "file_function": "This is the package.json file for the Docker web application. It defines the application's metadata, scripts, and dependencies.",
   "scripts": {
     "build": "vite build",
+    "docker:build": "node scripts/build-image.js",
     "start": "prisma db push && npm run prisma:seed && npm run prisma:migrate && node server.js",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "node prisma/migrate.js",

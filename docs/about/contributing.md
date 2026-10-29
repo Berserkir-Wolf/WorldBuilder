@@ -23,6 +23,12 @@ Start the application with:
 
 The application is available at http://localhost:3000. API documentation is available at http://localhost:3000/api-docs.
 
+Build the Docker image using the version in `package.json` with:
+
+    npm run docker:build
+
+This creates `berserkirwolf/worldbuilder:<version>` and adds the version to the image metadata.
+
 For a containerized development environment, run docker compose up --build from the repository root. The containerized application is available at http://localhost:8080.
 
 ### Documentation
