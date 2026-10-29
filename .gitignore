@@ -71,3 +71,4 @@ site/
 # Visual Studio files
 .vs/
 /app/data/
+/app/web-app/node_modules
