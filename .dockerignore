@@ -1,6 +1,13 @@
 **
 !app/
 !app/web-app/
-!app/web-app/**
-app/data/worldbuilder.db
-docs/
+!app/web-app/package.json
+!app/web-app/package-lock.json
+!app/web-app/server.js
+!app/web-app/openapi.js
+!app/web-app/vite.config.js
+!app/web-app/client/
+!app/web-app/client/**
+!app/web-app/prisma/
+!app/web-app/prisma/**
+app/web-app/client/public/
