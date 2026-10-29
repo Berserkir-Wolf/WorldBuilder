@@ -18,5 +18,8 @@ services:
       MYSQL_DATABASE: ${MYSQL_DATABASE:-worldbuilder}
       MYSQL_USER: ${MYSQL_USER:-worldbuilder}
       MYSQL_PASSWORD: ${MYSQL_PASSWORD:-}
+      SESSION_SECRET: ${SESSION_SECRET:-development-only-change-me}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@example.com}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
     volumes:
       - ./app/data:/app/data

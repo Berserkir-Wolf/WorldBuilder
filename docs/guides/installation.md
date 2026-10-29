@@ -71,6 +71,19 @@ When `DATABASE_PROVIDER=mysql` and `DATABASE_URL` is not set, the container buil
 
 Prisma providers are selected before Prisma Client is generated. The container selects `prisma/schema.sqlite.prisma` or `prisma/schema.mysql.prisma` from `DATABASE_PROVIDER`; Prisma does not support setting the schema `provider` property directly to an environment variable.
 
+### Authentication
+
+The users table provides application authentication. Set the following variables for a new installation:
+
+```yaml
+environment:
+  SESSION_SECRET: replace-with-a-long-random-secret
+  ADMIN_EMAIL: admin@example.com
+  ADMIN_PASSWORD: change-me
+```
+
+The administrator password is hashed before it is stored. Existing plaintext passwords are upgraded to scrypt hashes after a successful login. All database API routes require a signed session cookie; only `/api/auth/login`, `/api/auth/me`, and `/api/auth/logout` are unauthenticated endpoints.
+
 ### Database migrations
 
 The application stores the current database version in the `dbversion` row of `applicationsettings`. On startup, Prisma synchronizes the models, seeds missing baseline data, and applies pending application migrations in `app/web-app/prisma/migrate.js`.

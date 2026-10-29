@@ -71,6 +71,11 @@ const form = ref(emptyForm(tableDefinitions.users));
 const editingId = ref(null);
 const loading = ref(false);
 const message = ref(null);
+const authLoading = ref(true);
+const authenticated = ref(false);
+const authUser = ref(null);
+const loginForm = ref({ identifier: '', password: '' });
+const loginError = ref(null);
 const definition = computed(() => tableDefinitions[tableName.value]);
 
 function apiUrl(name) {
@@ -92,6 +97,10 @@ async function loadRecords() {
   loading.value = true;
   try {
     const response = await fetch(apiUrl(tableName.value));
+    if (response.status === 401) {
+      authenticated.value = false;
+      return;
+    }
     if (!response.ok) throw new Error('Unable to load records.');
     records.value = await response.json();
   } catch (error) {
@@ -99,6 +108,47 @@ async function loadRecords() {
   } finally {
     loading.value = false;
   }
+
+async function initializeAuth() {
+  try {
+    const response = await fetch(apiUrl('auth/me'), { credentials: 'same-origin' });
+    if (response.ok) {
+      const result = await response.json();
+      authUser.value = result.user;
+      authenticated.value = true;
+      await loadRecords();
+    }
+  } finally {
+    authLoading.value = false;
+  }
+}
+
+async function login() {
+  loginError.value = null;
+  try {
+    const response = await fetch(apiUrl('auth/login'), {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(loginForm.value)
+    });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(result.error || 'Unable to sign in.');
+    authUser.value = result.user;
+    authenticated.value = true;
+    loginForm.value.password = '';
+    await loadRecords();
+  } catch (error) {
+    loginError.value = error.message;
+  }
+}
+
+async function logout() {
+  await fetch(apiUrl('auth/logout'), { method: 'POST', credentials: 'same-origin' });
+  authenticated.value = false;
+  authUser.value = null;
+  records.value = [];
+}
 }
 
 watch(tableName, () => {
@@ -168,15 +218,36 @@ function cancelEdit() {
   form.value = emptyForm(definition.value);
 }
 
-onMounted(loadRecords);
+onMounted(initializeAuth);
 </script>
 
 <template>
+  <div v-if="authLoading" class="auth-message">Checking session...</div>
+
+  <form v-else-if="!authenticated" class="login-card card" @submit.prevent="login">
+    <h1>Sign in to WorldBuilder</h1>
+    <p v-if="loginError" class="error-message">{{ loginError }}</p>
+    <label class="field">
+      <span>Email or username</span>
+      <input v-model="loginForm.identifier" required autocomplete="username" />
+    </label>
+    <label class="field">
+      <span>Password</span>
+      <input v-model="loginForm.password" required type="password" autocomplete="current-password" />
+    </label>
+    <button class="primary" type="submit">Sign in</button>
+  </form>
+
+  <template v-else>
   <header class="app-bar">
     <strong>WorldBuilder</strong>
-    <button class="theme-button" type="button" :title="`Switch to ${mode === 'light' ? 'dark' : 'light'} mode`" @click="$emit('toggle-mode')">
-      {{ mode === 'light' ? '☾' : '☀' }}
-    </button>
+    <span class="header-actions">
+      <span class="user-name">{{ authUser?.name || authUser?.email }}</span>
+      <button class="theme-button" type="button" :title="`Switch to ${mode === 'light' ? 'dark' : 'light'} mode`" @click="$emit('toggle-mode')">
+        {{ mode === 'light' ? '☾' : '☀' }}
+      </button>
+      <button class="theme-button" type="button" @click="logout">Sign out</button>
+    </span>
   </header>
 
   <main class="container">
@@ -225,6 +296,7 @@ onMounted(loadRecords);
     {{ message.text }}
     <button type="button" aria-label="Close" @click="message = null">×</button>
   </div>
+  </template>
 </template>
 
 <style scoped>
@@ -233,7 +305,9 @@ onMounted(loadRecords);
 :global(:root) { --background: #f5f7fb; --surface: #fff; --text: #172033; --muted: #657187; --border: #d7dce5; --primary: #1565c0; }
 :global(.dark) { --background: #121820; --surface: #1d2733; --text: #edf2f7; --muted: #aab6c5; --border: #3a4756; --primary: #90caf9; }
 .app-bar { display: flex; align-items: center; justify-content: space-between; padding: 1rem max(1.5rem, calc((100% - 1200px) / 2)); color: white; background: #1976d2; font-size: 1.25rem; }
-.theme-button { border: 0; color: inherit; background: transparent; font-size: 1.5rem; cursor: pointer; }
+.header-actions { display: flex; align-items: center; gap: .75rem; } .user-name { font-size: .85rem; }
+.theme-button { border: 0; color: inherit; background: transparent; font-size: 1rem; cursor: pointer; }
+.auth-message { padding: 2rem; text-align: center; } .login-card { display: grid; gap: 1rem; max-width: 420px; margin: 4rem auto; } .error-message { color: #d32f2f; }
 .container { display: grid; gap: 1.5rem; max-width: 1200px; margin: 0 auto; padding: 2rem 1.5rem; }
 h1, h2 { margin: 0 0 .5rem; } h1 { font-size: 2rem; } h2 { font-size: 1.25rem; }
 .muted { color: var(--muted); } .card { padding: 1.5rem; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); box-shadow: 0 1px 3px #00000012; }

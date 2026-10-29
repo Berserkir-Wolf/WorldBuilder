@@ -1,4 +1,5 @@
 const { PrismaClient } = require('@prisma/client');
+const { hashPassword } = require('../auth');
 
 const prisma = new PrismaClient();
 const initialDatabaseVersion = '1.0.0';
@@ -15,22 +16,15 @@ async function upsertById(model, row) {
 
 async function seedUsers() {
   await prisma.user.upsert({
-    where: { email: 'alice@example.com' },
-    update: { name: 'Alice' },
-    create: { name: 'Alice', email: 'alice@example.com' }
+    where: { email: 'admin@example.com' },
+    update: { name: 'admin' },
+    create: { name: 'admin', email: 'admin@example.com' }
   });
-
-  await prisma.user.upsert({
-    where: { email: 'bob@example.com' },
-    update: { name: 'Bob' },
-    create: { name: 'Bob', email: 'bob@example.com' }
-  });
-}
 
 async function seedApplicationSettings() {
   const settings = [
     { settingName: 'appname', settingValue: 'My Application' },
-    { settingName: 'appversion', settingValue: '1.0.0' }
+    { settingName: 'appversion', settingValue: '0.0.1' }
   ];
 
   for (const setting of settings) {
