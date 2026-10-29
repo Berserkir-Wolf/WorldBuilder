@@ -130,5 +130,7 @@ site/
 
 # Visual Studio files
 .vs/
+# Database folder
 /app/data/
+# Node modules folder
 /app/web-app/node_modules
