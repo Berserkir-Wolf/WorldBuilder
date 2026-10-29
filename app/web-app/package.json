@@ -1,6 +1,6 @@
 {
   "name": "WorldBuilder",
-  "version": "1.0.0",
+  "version": "0.0.1",
   "main": "server.js",
   "file_function": "This is the package.json file for the Docker web application. It defines the application's metadata, scripts, and dependencies.",
   "scripts": {
