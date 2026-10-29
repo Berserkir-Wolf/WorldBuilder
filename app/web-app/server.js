@@ -1,6 +1,8 @@
 const express = require('express');
 const { PrismaClient } = require('@prisma/client');
+const swaggerUi = require('swagger-ui-express');
 const path = require('path');
+const { createOpenApiDocument } = require('./openapi');
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -25,6 +27,7 @@ function getBasePath(baseUrl) {
 const basePath = getBasePath(configuredBaseUrl);
 const publicDirectory = path.join(__dirname, 'client', 'public');
 const apiRouter = express.Router();
+const openApiDocument = createOpenApiDocument(basePath);
 
 app.use(express.json());
 
@@ -186,6 +189,17 @@ apiRouter.delete('/:resource/:id', async (req, res) => {
 });
 
 app.use(`${basePath}/api` || '/api', apiRouter);
+app.get(`${basePath}/api-docs/openapi.json`, (req, res) => {
+    res.json(openApiDocument);
+});
+app.use(
+    `${basePath}/api-docs`,
+    swaggerUi.serve,
+    swaggerUi.setup(openApiDocument, {
+        explorer: true,
+        customSiteTitle: 'WorldBuilder API documentation'
+    })
+);
 app.use(basePath || '/', express.static(publicDirectory));
 
 async function start() {
