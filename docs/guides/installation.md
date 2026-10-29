@@ -45,6 +45,32 @@ services:
 
 `BASE_URL` controls the path where the application is mounted. Use `/` for a direct local deployment, or set it to a path such as `/worldbuilder` when the application is behind a reverse proxy. An absolute URL is also accepted; its path component is used for routing.
 
+### Database providers
+
+SQLite is the default database provider. To select it explicitly in Docker Compose, use:
+
+```yaml
+environment:
+  DATABASE_PROVIDER: sqlite
+  DATABASE_URL: file:/app/data/worldbuilder.db
+```
+
+MySQL is also supported. Set `DATABASE_PROVIDER` to `mysql` and provide either `DATABASE_URL` directly or the individual MySQL connection variables:
+
+```yaml
+environment:
+  DATABASE_PROVIDER: mysql
+  MYSQL_HOST: mysql
+  MYSQL_PORT: 3306
+  MYSQL_DATABASE: worldbuilder
+  MYSQL_USER: worldbuilder
+  MYSQL_PASSWORD: change-me
+```
+
+When `DATABASE_PROVIDER=mysql` and `DATABASE_URL` is not set, the container builds a MySQL URL from the `MYSQL_*` variables. Supplying `DATABASE_URL` directly is recommended for production deployments, especially when credentials contain special characters.
+
+Prisma providers are selected before Prisma Client is generated. The container selects `prisma/schema.sqlite.prisma` or `prisma/schema.mysql.prisma` from `DATABASE_PROVIDER`; Prisma does not support setting the schema `provider` property directly to an environment variable.
+
 ### Database migrations
 
 The application stores the current database version in the `dbversion` row of `applicationsettings`. On startup, Prisma synchronizes the models, seeds missing baseline data, and applies pending application migrations in `app/web-app/prisma/migrate.js`.

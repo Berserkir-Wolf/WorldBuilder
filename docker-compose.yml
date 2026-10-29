@@ -1,13 +1,20 @@
 services:
   web:
+    image: berserkirwolf/worldbuilder:latest
     build:
       context: .
       dockerfile: app/web-app/dockerfile
     ports:
       - "8080:3000"
     environment:
-      DATABASE_URL: file:/app/data/worldbuilder.db
+      DATABASE_PROVIDER: ${DATABASE_PROVIDER:-sqlite}
+      DATABASE_URL: ${DATABASE_URL:-file:/app/data/worldbuilder.db}
       BASE_URL: /
       UPLOAD_FOLDER: /app/data/uploads
+      MYSQL_HOST: ${MYSQL_HOST:-mysql}
+      MYSQL_PORT: ${MYSQL_PORT:-3306}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-worldbuilder}
+      MYSQL_USER: ${MYSQL_USER:-worldbuilder}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-}
     volumes:
       - ./app/data:/app/data

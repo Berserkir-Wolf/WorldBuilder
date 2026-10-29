@@ -1,0 +1,72 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id       Int     @id @default(autoincrement())
+  name     String
+  email    String  @unique
+  username String?
+  password String?
+
+  @@map("users")
+}
+
+model ApplicationSetting {
+  id           Int     @id @default(autoincrement())
+  settingName  String  @unique @map("setting_name")
+  settingValue String? @map("setting_value")
+
+  @@map("applicationsettings")
+}
+
+model Location {
+  id             Int     @id @default(autoincrement())
+  name           String?
+  description    String?
+  parentLocation Int?    @map("parent_location")
+
+  @@map("locations")
+}
+
+model Character {
+  id       Int     @id @default(autoincrement())
+  name     String?
+  type     String?
+  role     String?
+  location Int?
+
+  @@map("characters")
+}
+
+model CharacterDetail {
+  id             Int     @id @default(autoincrement())
+  characterId    Int?    @map("character_id")
+  charisma       Int?
+  intelligence   Int?
+  wisdom         Int?
+  dexterity      Int?
+  constitution   Int?
+  strength       Int?
+  race           String?
+  characterClass String? @map("class")
+  level          Int?
+  alignment      String?
+
+  @@map("characterdetails")
+}
+
+model Reputation {
+  id         Int     @id @default(autoincrement())
+  characterId Int?   @map("character_ID")
+  targetId   Int?    @map("target_ID")
+  adjustment Int?
+  note       String?
+
+  @@map("reputation")
+}
