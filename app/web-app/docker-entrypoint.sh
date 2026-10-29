@@ -29,6 +29,11 @@ if [ "$provider" = "mysql" ] && [ -z "${DATABASE_URL:-}" ]; then
   export DATABASE_URL
 fi
 
+if [ "$provider" = "sqlite" ] && [ -z "${DATABASE_URL:-}" ]; then
+  DATABASE_URL='file:/app/data/worldbuilder.db'
+  export DATABASE_URL
+fi
+
 cp "$schema" prisma/schema.prisma
 npx prisma generate --schema prisma/schema.prisma
 

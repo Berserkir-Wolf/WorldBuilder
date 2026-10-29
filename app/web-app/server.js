@@ -1,4 +1,9 @@
 const express = require('express');
+
+if (!process.env.DATABASE_URL && (process.env.DATABASE_PROVIDER || 'sqlite') === 'sqlite') {
+    process.env.DATABASE_URL = 'file:/app/data/worldbuilder.db';
+}
+
 const { PrismaClient } = require('@prisma/client');
 const swaggerUi = require('swagger-ui-express');
 const path = require('path');
