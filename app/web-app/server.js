@@ -5,11 +5,12 @@ if (!process.env.DATABASE_URL && (process.env.DATABASE_PROVIDER || 'sqlite') ===
 }
 
 const { PrismaClient } = require('@prisma/client');
-const cookieSession = require('cookie-session');
+const session = require('express-session');
 const swaggerUi = require('swagger-ui-express');
 const path = require('path');
 const { createOpenApiDocument } = require('./openapi');
 const { hashPassword, verifyPassword, publicUser } = require('./auth');
+const PrismaSessionStore = require('./session-store');
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -35,27 +36,52 @@ const basePath = getBasePath(configuredBaseUrl);
 const publicDirectory = path.join(__dirname, 'client', 'public');
 const apiRouter = express.Router();
 const authRouter = express.Router();
+const adminRouter = express.Router();
 const openApiDocument = createOpenApiDocument(basePath);
 
 app.use(express.json());
-app.use(cookieSession({
+app.use(session({
     name: 'worldbuilder.session',
-    keys: [process.env.SESSION_SECRET || 'development-only-change-me'],
-    httpOnly: true,
-    sameSite: 'lax',
-    secure: process.env.NODE_ENV === 'production',
-    maxAge: 1000 * 60 * 60 * 24 * 7
+    secret: process.env.SESSION_SECRET || 'development-only-change-me',
+    store: new PrismaSessionStore(prisma),
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+        httpOnly: true,
+        sameSite: 'lax',
+        secure: process.env.NODE_ENV === 'production',
+        maxAge: 1000 * 60 * 60 * 24 * 7
+    }
 }));
 
 if (process.env.NODE_ENV === 'production' && !process.env.SESSION_SECRET) {
     console.warn('SESSION_SECRET is not set; configure it before using authentication in production.');
 }
 
-function requireAuth(req, res, next) {
+async function requireAuth(req, res, next) {
     if (!req.session?.userId) {
         return res.status(401).json({ error: 'Authentication required.' });
     }
+    req.user = await prisma.user.findUnique({ where: { id: req.session.userId } });
+    if (!req.user) {
+        return req.session.destroy(() => res.status(401).json({ error: 'Authentication required.' }));
+    }
+    if (req.user.mustResetPassword) {
+        return res.status(403).json({ error: 'Password reset required.' });
+    }
     return next();
+}
+
+function requireWrite(req, res, next) {
+    return req.user?.canWrite
+        ? next()
+        : res.status(403).json({ error: 'Write access required.' });
+}
+
+function requireAdministrator(req, res, next) {
+    return req.user?.isAdministrator
+        ? next()
+        : res.status(403).json({ error: 'Administrator access required.' });
 }
 
 authRouter.post('/login', async (req, res) => {
@@ -75,6 +101,7 @@ authRouter.post('/login', async (req, res) => {
                 ]
             }
         });
+
         const verification = await verifyPassword(password, user?.password);
 
         if (!user || !verification.valid) {
@@ -86,9 +113,72 @@ authRouter.post('/login', async (req, res) => {
                 where: { id: user.id },
                 data: { password: await hashPassword(password) }
             });
+
+authRouter.get('/appname', async (req, res) => {
+    const setting = await prisma.applicationSetting.findUnique({ where: { settingName: 'appname' } });
+    return res.json({ appName: setting?.settingValue || 'WorldBuilder' });
+});
+
+adminRouter.use(requireAuth, requireAdministrator);
+adminRouter.get('/users', async (req, res) => {
+    const users = await prisma.user.findMany({ orderBy: { id: 'asc' } });
+    return res.json(users.map(publicUser));
+});
+
+adminRouter.post('/users', async (req, res) => {
+    const { name, email, username, password } = req.body;
+    if (!name || !email || !password) {
+        return res.status(400).json({ error: 'Name, email, and password are required.' });
+    }
+    const user = await prisma.user.create({
+        data: {
+            name,
+            email,
+            username: username || null,
+            password: await hashPassword(password),
+            canWrite: Boolean(req.body.canWrite),
+            isAdministrator: Boolean(req.body.isAdministrator),
+            mustResetPassword: Boolean(req.body.mustResetPassword)
+        }
+    });
+    return res.status(201).json(publicUser(user));
+});
+
+adminRouter.put('/users/:id', async (req, res) => {
+    const data = {};
+    ['name', 'email', 'username', 'canWrite', 'isAdministrator', 'mustResetPassword'].forEach((field) => {
+        if (Object.prototype.hasOwnProperty.call(req.body, field)) data[field] = req.body[field];
+    });
+    if (req.body.password) data.password = await hashPassword(req.body.password);
+    const user = await prisma.user.update({ where: { id: getRecordId(req.params.id) }, data });
+    return res.json(publicUser(user));
+});
+
+adminRouter.delete('/users/:id', async (req, res) => {
+    const id = getRecordId(req.params.id);
+    if (id === req.user.id) return res.status(400).json({ error: 'You cannot delete your own account.' });
+    await prisma.user.delete({ where: { id } });
+    return res.status(204).send();
+});
+
+adminRouter.get('/settings/appname', async (req, res) => {
+    const setting = await prisma.applicationSetting.findUnique({ where: { settingName: 'appname' } });
+    return res.json({ appName: setting?.settingValue || 'WorldBuilder' });
+});
+
+adminRouter.put('/settings/appname', async (req, res) => {
+    const appName = String(req.body.appName || '').trim();
+    if (!appName) return res.status(400).json({ error: 'App name is required.' });
+    const setting = await prisma.applicationSetting.upsert({
+        where: { settingName: 'appname' },
+        update: { settingValue: appName },
+        create: { settingName: 'appname', settingValue: appName }
+    });
+    return res.json({ appName: setting.settingValue });
+});
         }
 
-        req.session = { userId: user.id };
+        req.session.userId = user.id;
         return res.json({ user: publicUser(user) });
     } catch (error) {
         console.error(error);
@@ -103,7 +193,7 @@ authRouter.get('/me', async (req, res) => {
 
     const user = await prisma.user.findUnique({ where: { id: req.session.userId } });
     if (!user) {
-        req.session = null;
+        req.session.destroy(() => {});
         return res.status(401).json({ error: 'Authentication required.' });
     }
 
@@ -111,7 +201,21 @@ authRouter.get('/me', async (req, res) => {
 });
 
 authRouter.post('/logout', (req, res) => {
-    req.session = null;
+    return req.session.destroy(() => res.status(204).send());
+});
+
+authRouter.post('/reset-password', async (req, res) => {
+    if (!req.session?.userId) {
+        return res.status(401).json({ error: 'Authentication required.' });
+    }
+    const password = String(req.body.password || '');
+    if (password.length < 8) {
+        return res.status(400).json({ error: 'Password must be at least 8 characters.' });
+    }
+    await prisma.user.update({
+        where: { id: req.session.userId },
+        data: { password: await hashPassword(password), mustResetPassword: false }
+    });
     return res.status(204).send();
 });
 
@@ -236,7 +340,7 @@ apiRouter.get('/:resource', async (req, res) => {
     }
 });
 
-apiRouter.post('/:resource', async (req, res) => {
+apiRouter.post('/:resource', requireWrite, async (req, res) => {
     const resource = getResource(req.params.resource);
     if (!resource) {
         return res.status(404).json({ error: 'Unknown resource.' });
@@ -251,7 +355,7 @@ apiRouter.post('/:resource', async (req, res) => {
     }
 });
 
-apiRouter.put('/:resource/:id', async (req, res) => {
+apiRouter.put('/:resource/:id', requireWrite, async (req, res) => {
     const resource = getResource(req.params.resource);
     if (!resource) {
         return res.status(404).json({ error: 'Unknown resource.' });
@@ -269,7 +373,7 @@ apiRouter.put('/:resource/:id', async (req, res) => {
     }
 });
 
-apiRouter.delete('/:resource/:id', async (req, res) => {
+apiRouter.delete('/:resource/:id', requireWrite, async (req, res) => {
     const resource = getResource(req.params.resource);
     if (!resource) {
         return res.status(404).json({ error: 'Unknown resource.' });
@@ -285,6 +389,7 @@ apiRouter.delete('/:resource/:id', async (req, res) => {
 });
 
 app.use(`${basePath}/api/auth`, authRouter);
+app.use(`${basePath}/api/admin`, adminRouter);
 app.use(`${basePath}/api`, apiRouter);
 app.get(`${basePath}/api-docs/openapi.json`, (req, res) => {
     res.json(openApiDocument);
@@ -297,6 +402,8 @@ app.use(
         customSiteTitle: 'WorldBuilder API documentation'
     })
 );
+app.get(`${basePath}/login`, (req, res) => res.sendFile(path.join(publicDirectory, 'index.html')));
+app.get(`${basePath}/admin`, (req, res) => res.sendFile(path.join(publicDirectory, 'index.html')));
 app.use(basePath || '/', express.static(publicDirectory));
 
 async function start() {

@@ -76,13 +76,18 @@ const authenticated = ref(false);
 const authUser = ref(null);
 const loginForm = ref({ identifier: '', password: '' });
 const loginError = ref(null);
+const appName = ref('WorldBuilder');
+const page = ref(window.location.pathname === '/admin' ? 'admin' : 'database');
+const returnPath = ref('/');
+const adminUsers = ref([]);
+const appNameForm = ref('');
+const newUser = ref({ name: '', email: '', username: '', password: '', canWrite: false, isAdministrator: false, mustResetPassword: true });
 const definition = computed(() => tableDefinitions[tableName.value]);
+const canWrite = computed(() => Boolean(authUser.value?.canWrite));
+const isAdminPage = computed(() => page.value === 'admin');
 
 function apiUrl(name) {
-  const pagePath = window.location.pathname.endsWith('/')
-    ? window.location.pathname
-    : `${window.location.pathname}/`;
-  return `${pagePath}api/${name}`;
+  return `/api/${name}`;
 }
 
 function emptyForm(table) {
@@ -93,10 +98,17 @@ function formatValue(value) {
   return value === null || value === undefined ? '' : String(value);
 }
 
+function navigate(path) {
+  window.history.pushState({}, '', path);
+  page.value = path === '/admin' ? 'admin' : 'database';
+  if (path === '/admin') loadAdminData();
+  else loadRecords();
+}
+
 async function loadRecords() {
   loading.value = true;
   try {
-    const response = await fetch(apiUrl(tableName.value));
+    const response = await fetch(apiUrl(tableName.value), { credentials: 'same-origin' });
     if (response.status === 401) {
       authenticated.value = false;
       return;
@@ -108,36 +120,96 @@ async function loadRecords() {
   } finally {
     loading.value = false;
   }
+}
 
 async function initializeAuth() {
   try {
+    const appNameResponse = await fetch(apiUrl('auth/appname'));
+    if (appNameResponse.ok) {
+      appName.value = (await appNameResponse.json()).appName;
+      document.title = appName.value;
+    }
+
+    const requestedPath = window.location.pathname === '/login' ? '/' : window.location.pathname;
+    const queryReturn = new URLSearchParams(window.location.search).get('return');
+    returnPath.value = queryReturn === '/admin' || requestedPath === '/admin' ? '/admin' : '/';
     const response = await fetch(apiUrl('auth/me'), { credentials: 'same-origin' });
     if (response.ok) {
       const result = await response.json();
       authUser.value = result.user;
       authenticated.value = true;
-      await loadRecords();
+      if (window.location.pathname === '/login') navigate(returnPath.value);
+      else if (window.location.pathname === '/admin' && !authUser.value.isAdministrator) navigate('/');
+      else if (page.value === 'admin') await loadAdminData();
+      else await loadRecords();
+    } else {
+      page.value = 'login';
+      if (window.location.pathname !== '/login') {
+        returnPath.value = window.location.pathname === '/admin' ? '/admin' : '/';
+        window.history.replaceState({}, '', `/login?return=${encodeURIComponent(returnPath.value)}`);
+      }
     }
   } finally {
     authLoading.value = false;
   }
 }
 
+async function loadAdminData() {
+  const [usersResponse, settingResponse] = await Promise.all([
+    fetch(apiUrl('admin/users')), fetch(apiUrl('admin/settings/appname'))
+  ]);
+  if (!usersResponse.ok || !settingResponse.ok) throw new Error('Unable to load administrator data.');
+  adminUsers.value = await usersResponse.json();
+  appNameForm.value = (await settingResponse.json()).appName;
+}
+
+async function saveAppName() {
+  const response = await fetch(apiUrl('admin/settings/appname'), {
+    method: 'PUT', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ appName: appNameForm.value })
+  });
+  if (!response.ok) throw new Error('Unable to save application name.');
+  appName.value = appNameForm.value;
+  document.title = appName.value;
+}
+
+async function createUser() {
+  const response = await fetch(apiUrl('admin/users'), {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(newUser.value)
+  });
+  if (!response.ok) throw new Error('Unable to create user.');
+  newUser.value = { name: '', email: '', username: '', password: '', canWrite: false, isAdministrator: false, mustResetPassword: true };
+  await loadAdminData();
+}
+
+async function updateUser(user) {
+  const response = await fetch(`${apiUrl('admin/users')}/${user.id}`, {
+    method: 'PUT', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ canWrite: user.canWrite, isAdministrator: user.isAdministrator, mustResetPassword: user.mustResetPassword })
+  });
+  if (!response.ok) throw new Error('Unable to update user.');
+}
+
+async function deleteUser(user) {
+  if (!window.confirm(`Delete ${user.email}?`)) return;
+  const response = await fetch(`${apiUrl('admin/users')}/${user.id}`, { method: 'DELETE' });
+  if (!response.ok) throw new Error('Unable to delete user.');
+  await loadAdminData();
+}
+
 async function login() {
   loginError.value = null;
   try {
     const response = await fetch(apiUrl('auth/login'), {
-      method: 'POST',
-      credentials: 'same-origin',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(loginForm.value)
+      method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(loginForm.value)
     });
     const result = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(result.error || 'Unable to sign in.');
     authUser.value = result.user;
     authenticated.value = true;
     loginForm.value.password = '';
-    await loadRecords();
+    const destination = returnPath.value === '/admin' && !authUser.value.isAdministrator ? '/' : returnPath.value;
+    navigate(destination);
   } catch (error) {
     loginError.value = error.message;
   }
@@ -148,33 +220,28 @@ async function logout() {
   authenticated.value = false;
   authUser.value = null;
   records.value = [];
-}
+  returnPath.value = '/';
+  page.value = 'login';
+  window.history.pushState({}, '', '/login');
 }
 
 watch(tableName, () => {
   form.value = emptyForm(definition.value);
   editingId.value = null;
-  loadRecords();
+  if (authenticated.value && !isAdminPage.value) loadRecords();
 });
 
 async function saveRecord() {
+  if (!canWrite.value) return;
   const payload = {};
   definition.value.fields.forEach((field) => {
     const value = form.value[field.name];
-    payload[field.name] = field.type === 'number'
-      ? (value === '' ? null : Number(value))
-      : (value === '' ? null : value);
+    payload[field.name] = field.type === 'number' ? (value === '' ? null : Number(value)) : (value === '' ? null : value);
   });
-
   try {
-    const response = await fetch(
-      editingId.value === null ? apiUrl(tableName.value) : `${apiUrl(tableName.value)}/${editingId.value}`,
-      {
-        method: editingId.value === null ? 'POST' : 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      }
-    );
+    const response = await fetch(editingId.value === null ? apiUrl(tableName.value) : `${apiUrl(tableName.value)}/${editingId.value}`, {
+      method: editingId.value === null ? 'POST' : 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+    });
     if (!response.ok) {
       const result = await response.json().catch(() => ({}));
       throw new Error(result.error || 'Unable to save record.');
@@ -189,24 +256,16 @@ async function saveRecord() {
 }
 
 function editRecord(record) {
+  if (!canWrite.value) return;
   editingId.value = record.id;
   form.value = Object.fromEntries(definition.value.fields.map((field) => [field.name, formatValue(record[field.name])]));
 }
 
 async function deleteRecord(id) {
-  if (!window.confirm('Delete this record?')) return;
-
+  if (!canWrite.value || !window.confirm('Delete this record?')) return;
   try {
     const response = await fetch(`${apiUrl(tableName.value)}/${id}`, { method: 'DELETE' });
-    if (!response.ok) {
-      const result = await response.json().catch(() => ({}));
-      throw new Error(result.error || 'Unable to delete record.');
-    }
-    message.value = { severity: 'success', text: 'Record deleted.' };
-    if (editingId.value === id) {
-      editingId.value = null;
-      form.value = emptyForm(definition.value);
-    }
+    if (!response.ok) throw new Error('Unable to delete record.');
     await loadRecords();
   } catch (error) {
     message.value = { severity: 'error', text: error.message };
@@ -218,14 +277,17 @@ function cancelEdit() {
   form.value = emptyForm(definition.value);
 }
 
-onMounted(initializeAuth);
+onMounted(() => {
+  window.addEventListener('popstate', initializeAuth);
+  initializeAuth();
+});
 </script>
 
 <template>
   <div v-if="authLoading" class="auth-message">Checking session...</div>
 
   <form v-else-if="!authenticated" class="login-card card" @submit.prevent="login">
-    <h1>Sign in to WorldBuilder</h1>
+    <h1>Sign in to {{ appName }}</h1>
     <p v-if="loginError" class="error-message">{{ loginError }}</p>
     <label class="field">
       <span>Email or username</span>
@@ -240,9 +302,11 @@ onMounted(initializeAuth);
 
   <template v-else>
   <header class="app-bar">
-    <strong>WorldBuilder</strong>
+    <strong>{{ appName }}</strong>
     <span class="header-actions">
       <span class="user-name">{{ authUser?.name || authUser?.email }}</span>
+      <button v-if="authUser?.isAdministrator && page !== 'admin'" class="theme-button" type="button" @click="navigate('/admin')">Admin</button>
+      <button v-if="page === 'admin'" class="theme-button" type="button" @click="navigate('/')">Database</button>
       <button class="theme-button" type="button" :title="`Switch to ${mode === 'light' ? 'dark' : 'light'} mode`" @click="$emit('toggle-mode')">
         {{ mode === 'light' ? '☾' : '☀' }}
       </button>
@@ -250,7 +314,7 @@ onMounted(initializeAuth);
     </span>
   </header>
 
-  <main class="container">
+  <main v-if="page === 'database'" class="container">
     <section>
       <h1>Database manager</h1>
       <p class="muted">Create and manage records across the WorldBuilder database.</p>
@@ -263,7 +327,7 @@ onMounted(initializeAuth);
       </select>
     </label>
 
-    <form class="card" @submit.prevent="saveRecord">
+    <form v-if="canWrite" class="card" @submit.prevent="saveRecord">
       <h2>{{ editingId === null ? 'Add' : 'Edit' }} {{ definition.label }}</h2>
       <div class="form-grid">
         <label v-for="field in definition.fields" :key="field.name" class="field" :class="{ wide: field.multiline }">
@@ -284,11 +348,42 @@ onMounted(initializeAuth);
       <div v-for="record in records" v-else :key="record.id" class="record">
         <span>{{ definition.fields.map((field) => `${field.label}: ${formatValue(record[field.name])}`).join(' · ') }}</span>
         <span class="record-actions">
-          <button type="button" title="Edit" @click="editRecord(record)">Edit</button>
-          <button class="danger" type="button" title="Delete" @click="deleteRecord(record.id)">Delete</button>
+           <button v-if="canWrite" type="button" title="Edit" @click="editRecord(record)">Edit</button>
+           <button v-if="canWrite" class="danger" type="button" title="Delete" @click="deleteRecord(record.id)">Delete</button>
         </span>
       </div>
       <p v-if="!loading && records.length === 0" class="muted">No records found.</p>
+    </section>
+  </main>
+
+  <main v-else class="container">
+    <section class="card">
+      <h1>Administrator</h1>
+      <h2>Application name</h2>
+      <div class="actions">
+        <input v-model="appNameForm" aria-label="Application name" />
+        <button class="primary" type="button" @click="saveAppName">Save name</button>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Users</h2>
+      <form class="form-grid" @submit.prevent="createUser">
+        <input v-model="newUser.name" required placeholder="Name" />
+        <input v-model="newUser.email" required type="email" placeholder="Email" />
+        <input v-model="newUser.username" placeholder="Username" />
+        <input v-model="newUser.password" required type="password" placeholder="Password" />
+        <label><input v-model="newUser.canWrite" type="checkbox" /> Write access</label>
+        <label><input v-model="newUser.isAdministrator" type="checkbox" /> Administrator</label>
+        <button class="primary" type="submit">Create user</button>
+      </form>
+      <div v-for="user in adminUsers" :key="user.id" class="record">
+        <span>{{ user.email }}</span>
+        <label><input v-model="user.canWrite" type="checkbox" @change="updateUser(user)" /> Write</label>
+        <label><input v-model="user.isAdministrator" type="checkbox" @change="updateUser(user)" /> Admin</label>
+        <label><input v-model="user.mustResetPassword" type="checkbox" @change="updateUser(user)" /> Reset</label>
+        <button class="danger" type="button" @click="deleteUser(user)">Delete</button>
+      </div>
     </section>
   </main>
 

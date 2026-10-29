@@ -1,5 +1,6 @@
 const { PrismaClient } = require('@prisma/client');
 const { hashPassword } = require('../auth');
+const applicationVersion = require('../package.json').version;
 
 const prisma = new PrismaClient();
 const initialDatabaseVersion = '1.0.0';
@@ -15,16 +16,41 @@ async function upsertById(model, row) {
 }
 
 async function seedUsers() {
-  await prisma.user.upsert({
-    where: { email: 'admin@example.com' },
-    update: { name: 'admin' },
-    create: { name: 'admin', email: 'admin@example.com' }
-  });
+  const email = process.env.ADMIN_EMAIL || 'admin@example.com';
+  const password = process.env.ADMIN_PASSWORD || 'admin';
+  const existingUser = await prisma.user.findUnique({ where: { email } });
+
+  if (!existingUser) {
+    await prisma.user.create({
+      data: {
+        name: 'admin',
+        email,
+        password: await hashPassword(password),
+        canWrite: true,
+        isAdministrator: true,
+        mustResetPassword: true
+      }
+    });
+    return;
+  }
+
+  if (!existingUser.password) {
+    await prisma.user.update({
+      where: { id: existingUser.id },
+      data: { password: await hashPassword(password), canWrite: true, isAdministrator: true, mustResetPassword: true }
+    });
+  } else if (!existingUser.isAdministrator || !existingUser.canWrite) {
+    await prisma.user.update({
+      where: { id: existingUser.id },
+      data: { canWrite: true, isAdministrator: true }
+    });
+  }
+}
 
 async function seedApplicationSettings() {
   const settings = [
-    { settingName: 'appname', settingValue: 'My Application' },
-    { settingName: 'appversion', settingValue: '0.0.1' }
+    { settingName: 'appname', settingValue: 'WorldBuilder' },
+    { settingName: 'appversion', settingValue: applicationVersion }
   ];
 
   for (const setting of settings) {

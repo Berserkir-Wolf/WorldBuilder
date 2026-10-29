@@ -1,6 +1,6 @@
 {
   "name": "WorldBuilder",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "main": "server.js",
   "file_function": "This is the package.json file for the Docker web application. It defines the application's metadata, scripts, and dependencies.",
   "scripts": {
@@ -13,8 +13,8 @@
   },
   "dependencies": {
     "@prisma/client": "^6.19.3",
-    "cookie-session": "^2.1.1",
     "express": "^4.19.2",
+    "express-session": "^1.19.0",
     "prisma": "^6.19.3",
     "swagger-ui-express": "^5.0.1"
   },

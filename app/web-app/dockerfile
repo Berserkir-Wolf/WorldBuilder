@@ -25,7 +25,7 @@ COPY app/web-app/package*.json ./
 RUN npm ci --omit=dev && npm cache clean --force
 
 COPY app/web-app/prisma ./prisma
-COPY app/web-app/server.js app/web-app/openapi.js app/web-app/auth.js ./
+COPY app/web-app/server.js app/web-app/openapi.js app/web-app/auth.js app/web-app/session-store.js ./
 COPY app/web-app/docker-entrypoint.sh ./
 COPY --from=build /app/client/public ./client/public
 COPY --from=build /app/node_modules/.prisma ./node_modules/.prisma

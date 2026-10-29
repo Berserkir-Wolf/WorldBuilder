@@ -13,8 +13,24 @@ model User {
   email    String  @unique
   username String?
   password String?
+  canWrite Boolean @default(false) @map("can_write")
+  isAdministrator Boolean @default(false) @map("is_administrator")
+  mustResetPassword Boolean @default(false) @map("must_reset_password")
+  sessions Session[]
 
   @@map("users")
+}
+
+model Session {
+  id        String   @id
+  userId    Int      @map("user_id")
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("sessions")
 }
 
 model ApplicationSetting {

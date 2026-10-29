@@ -43,7 +43,7 @@ async function verifyPassword(password, storedPassword) {
         };
     }
 
-    const [, storedAlgorithm, storedCost, storedBlockSize, storedParallelization, salt, storedHash] = storedPassword.split('$');
+    const [storedAlgorithm, storedCost, storedBlockSize, storedParallelization, salt, storedHash] = storedPassword.split('$');
     if (storedAlgorithm !== algorithm || !salt || !storedHash) {
         return { valid: false, needsUpgrade: false };
     }

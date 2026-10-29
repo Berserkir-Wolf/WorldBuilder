@@ -6,6 +6,7 @@
 !app/web-app/server.js
 !app/web-app/openapi.js
 !app/web-app/auth.js
+!app/web-app/session-store.js
 !app/web-app/vite.config.js
 !app/web-app/client/
 !app/web-app/client/**
