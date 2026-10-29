@@ -403,6 +403,7 @@ app.use(
     })
 );
 app.get(`${basePath}/login`, (req, res) => res.sendFile(path.join(publicDirectory, 'index.html')));
+app.get(`${basePath}/reset-password`, (req, res) => res.sendFile(path.join(publicDirectory, 'index.html')));
 app.get(`${basePath}/admin`, (req, res) => res.sendFile(path.join(publicDirectory, 'index.html')));
 app.use(basePath || '/', express.static(publicDirectory));
 

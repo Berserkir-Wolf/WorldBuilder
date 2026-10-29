@@ -76,8 +76,11 @@ const authenticated = ref(false);
 const authUser = ref(null);
 const loginForm = ref({ identifier: '', password: '' });
 const loginError = ref(null);
+const resetForm = ref({ password: '', confirmation: '' });
+const resetError = ref(null);
+const resetLoading = ref(false);
 const appName = ref('WorldBuilder');
-const page = ref(window.location.pathname === '/admin' ? 'admin' : 'database');
+const page = ref(getPageForPath(window.location.pathname));
 const returnPath = ref('/');
 const adminUsers = ref([]);
 const appNameForm = ref('');
@@ -85,6 +88,13 @@ const newUser = ref({ name: '', email: '', username: '', password: '', canWrite:
 const definition = computed(() => tableDefinitions[tableName.value]);
 const canWrite = computed(() => Boolean(authUser.value?.canWrite));
 const isAdminPage = computed(() => page.value === 'admin');
+
+function getPageForPath(path) {
+  if (path === '/login') return 'login';
+  if (path === '/reset-password') return 'reset-password';
+  if (path === '/admin') return 'admin';
+  return 'database';
+}
 
 function apiUrl(name) {
   return `/api/${name}`;
@@ -98,7 +108,54 @@ function formatValue(value) {
   return value === null || value === undefined ? '' : String(value);
 }
 
-function navigate(path) {
+async function navigate(path, { replace = false } = {}) {
+  if (replace) window.history.replaceState({}, '', path);
+  else window.history.pushState({}, '', path);
+  page.value = getPageForPath(path);
+  if (page.value === 'admin') await loadAdminData();
+  else if (page.value === 'database') await loadRecords();
+}
+
+function setRoute(path, { replace = false } = {}) {
+  if (replace) window.history.replaceState({}, '', path);
+  else window.history.pushState({}, '', path);
+  page.value = getPageForPath(path);
+}
+
+async function resolveRoute() {
+  const path = window.location.pathname;
+  if (path === '/login') {
+    setRoute('/login');
+    return;
+  }
+  if (path === '/reset-password') {
+    setRoute('/reset-password');
+    return;
+  }
+  if (path === '/admin') {
+    if (!authUser.value.isAdministrator) {
+      setRoute('/');
+      await loadRecords();
+      return;
+    }
+    setRoute('/admin');
+    await loadAdminData();
+    return;
+  }
+  setRoute('/');
+  await loadRecords();
+}
+
+async function navigateFromUser(path) {
+  if (path === '/admin' && !authUser.value?.isAdministrator) return;
+  await navigate(path);
+}
+
+/*
+ * Keep route changes explicit so loading a page never starts another auth
+ * initialization cycle.
+ */
+function legacyNavigate(path) {
   window.history.pushState({}, '', path);
   page.value = path === '/admin' ? 'admin' : 'database';
   if (path === '/admin') loadAdminData();
@@ -138,10 +195,14 @@ async function initializeAuth() {
       const result = await response.json();
       authUser.value = result.user;
       authenticated.value = true;
-      if (window.location.pathname === '/login') navigate(returnPath.value);
-      else if (window.location.pathname === '/admin' && !authUser.value.isAdministrator) navigate('/');
-      else if (page.value === 'admin') await loadAdminData();
-      else await loadRecords();
+      if (authUser.value.mustResetPassword) {
+        setRoute('/reset-password');
+      } else if (window.location.pathname === '/login') {
+        setRoute(returnPath.value);
+        await resolveRoute();
+      } else {
+        await resolveRoute();
+      }
     } else {
       page.value = 'login';
       if (window.location.pathname !== '/login') {
@@ -149,6 +210,32 @@ async function initializeAuth() {
         window.history.replaceState({}, '', `/login?return=${encodeURIComponent(returnPath.value)}`);
       }
     }
+
+async function resetPassword() {
+  resetError.value = null;
+  if (resetForm.value.password !== resetForm.value.confirmation) {
+    resetError.value = 'Passwords do not match.';
+    return;
+  }
+  resetLoading.value = true;
+  try {
+    const response = await fetch(apiUrl('auth/reset-password'), {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: resetForm.value.password })
+    });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(result.error || 'Unable to reset password.');
+    authUser.value = { ...authUser.value, mustResetPassword: false };
+    resetForm.value = { password: '', confirmation: '' };
+    await navigate(returnPath.value);
+  } catch (error) {
+    resetError.value = error.message;
+  } finally {
+    resetLoading.value = false;
+  }
+}
   } finally {
     authLoading.value = false;
   }
@@ -208,8 +295,12 @@ async function login() {
     authUser.value = result.user;
     authenticated.value = true;
     loginForm.value.password = '';
-    const destination = returnPath.value === '/admin' && !authUser.value.isAdministrator ? '/' : returnPath.value;
-    navigate(destination);
+    if (authUser.value.mustResetPassword) {
+      setRoute('/reset-password');
+    } else {
+      const destination = returnPath.value === '/admin' && !authUser.value.isAdministrator ? '/' : returnPath.value;
+      await navigate(destination);
+    }
   } catch (error) {
     loginError.value = error.message;
   }
@@ -221,8 +312,7 @@ async function logout() {
   authUser.value = null;
   records.value = [];
   returnPath.value = '/';
-  page.value = 'login';
-  window.history.pushState({}, '', '/login');
+  setRoute('/login');
 }
 
 watch(tableName, () => {
@@ -278,7 +368,11 @@ function cancelEdit() {
 }
 
 onMounted(() => {
-  window.addEventListener('popstate', initializeAuth);
+  window.addEventListener('popstate', () => {
+    page.value = getPageForPath(window.location.pathname);
+    if (authenticated.value && page.value === 'database') loadRecords();
+    if (authenticated.value && page.value === 'admin') loadAdminData();
+  });
   initializeAuth();
 });
 </script>
@@ -300,9 +394,24 @@ onMounted(() => {
     <button class="primary" type="submit">Sign in</button>
   </form>
 
+  <form v-else-if="page === 'reset-password'" class="login-card card" @submit.prevent="resetPassword">
+    <h1>Reset your password</h1>
+    <p class="muted">A password reset is required before you can continue.</p>
+    <p v-if="resetError" class="error-message">{{ resetError }}</p>
+    <label class="field">
+      <span>New password</span>
+      <input v-model="resetForm.password" required minlength="8" type="password" autocomplete="new-password" />
+    </label>
+    <label class="field">
+      <span>Confirm new password</span>
+      <input v-model="resetForm.confirmation" required minlength="8" type="password" autocomplete="new-password" />
+    </label>
+    <button class="primary" type="submit" :disabled="resetLoading">{{ resetLoading ? 'Saving...' : 'Reset password' }}</button>
+  </form>
+
   <template v-else>
   <header class="app-bar">
-    <strong>{{ appName }}</strong>
+    <a class="app-name" href="/" @click.prevent="navigate('/')">{{ appName }}</a>
     <span class="header-actions">
       <span class="user-name">{{ authUser?.name || authUser?.email }}</span>
       <button v-if="authUser?.isAdministrator && page !== 'admin'" class="theme-button" type="button" @click="navigate('/admin')">Admin</button>
@@ -400,6 +509,7 @@ onMounted(() => {
 :global(:root) { --background: #f5f7fb; --surface: #fff; --text: #172033; --muted: #657187; --border: #d7dce5; --primary: #1565c0; }
 :global(.dark) { --background: #121820; --surface: #1d2733; --text: #edf2f7; --muted: #aab6c5; --border: #3a4756; --primary: #90caf9; }
 .app-bar { display: flex; align-items: center; justify-content: space-between; padding: 1rem max(1.5rem, calc((100% - 1200px) / 2)); color: white; background: #1976d2; font-size: 1.25rem; }
+.app-name { color: inherit; text-decoration: none; font-weight: 700; }
 .header-actions { display: flex; align-items: center; gap: .75rem; } .user-name { font-size: .85rem; }
 .theme-button { border: 0; color: inherit; background: transparent; font-size: 1rem; cursor: pointer; }
 .auth-message { padding: 2rem; text-align: center; } .login-card { display: grid; gap: 1rem; max-width: 420px; margin: 4rem auto; } .error-message { color: #d32f2f; }
