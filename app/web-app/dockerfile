@@ -1,15 +1,30 @@
-FROM node:24-alpine
+FROM node:24-alpine AS build
 
 WORKDIR /app
 
 COPY app/web-app/package*.json ./
-RUN npm install
+RUN npm ci
 
 COPY app/web-app/prisma ./prisma
 RUN npx prisma generate
 
-COPY app/web-app/. .
+COPY app/web-app/client ./client
+COPY app/web-app/vite.config.js ./
 RUN npm run build
+
+FROM node:24-alpine AS runtime
+
+WORKDIR /app
+
+ENV NODE_ENV=production
+
+COPY app/web-app/package*.json ./
+RUN npm ci --omit=dev && npm cache clean --force
+
+COPY app/web-app/prisma ./prisma
+COPY app/web-app/server.js app/web-app/openapi.js ./
+COPY --from=build /app/client/public ./client/public
+COPY --from=build /app/node_modules/.prisma ./node_modules/.prisma
 
 EXPOSE 3000
 
