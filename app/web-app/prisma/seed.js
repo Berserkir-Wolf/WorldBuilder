@@ -25,6 +25,7 @@ async function seedUsers() {
       data: {
         name: 'admin',
         email,
+        username: 'admin',
         password: await hashPassword(password),
         canWrite: true,
         isAdministrator: true,
@@ -37,12 +38,27 @@ async function seedUsers() {
   if (!existingUser.password) {
     await prisma.user.update({
       where: { id: existingUser.id },
-      data: { password: await hashPassword(password), canWrite: true, isAdministrator: true, mustResetPassword: true }
+      data: {
+        username: existingUser.username || 'admin',
+        password: await hashPassword(password),
+        canWrite: true,
+        isAdministrator: true,
+        mustResetPassword: true
+      }
     });
   } else if (!existingUser.isAdministrator || !existingUser.canWrite) {
     await prisma.user.update({
       where: { id: existingUser.id },
-      data: { canWrite: true, isAdministrator: true }
+      data: {
+        username: existingUser.username || 'admin',
+        canWrite: true,
+        isAdministrator: true
+      }
+    });
+  } else if (!existingUser.username) {
+    await prisma.user.update({
+      where: { id: existingUser.id },
+      data: { username: 'admin' }
     });
   }
 }

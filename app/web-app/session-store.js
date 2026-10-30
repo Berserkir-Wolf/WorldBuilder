@@ -6,6 +6,20 @@ class PrismaSessionStore extends session.Store {
         this.prisma = prisma;
     }
 
+    createSessionData(record) {
+        return {
+            cookie: {
+                path: '/',
+                httpOnly: true,
+                sameSite: 'lax',
+                secure: false,
+                expires: record.expiresAt,
+                originalMaxAge: Math.max(record.expiresAt.getTime() - Date.now(), 0)
+            },
+            userId: record.userId
+        };
+    }
+
     async get(sessionId, callback) {
         try {
             const record = await this.prisma.session.findUnique({ where: { id: sessionId } });
@@ -14,7 +28,7 @@ class PrismaSessionStore extends session.Store {
                 callback(null, null);
                 return;
             }
-            callback(null, { userId: record.userId });
+            callback(null, this.createSessionData(record));
         } catch (error) {
             callback(error);
         }

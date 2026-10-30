@@ -198,7 +198,7 @@ async function initializeAuth() {
       if (authUser.value.mustResetPassword) {
         setRoute('/reset-password');
       } else if (window.location.pathname === '/login') {
-        setRoute(returnPath.value);
+        setRoute('/');
         await resolveRoute();
       } else {
         await resolveRoute();
@@ -210,6 +210,10 @@ async function initializeAuth() {
         window.history.replaceState({}, '', `/login?return=${encodeURIComponent(returnPath.value)}`);
       }
     }
+  } finally {
+    authLoading.value = false;
+  }
+}
 
 async function resetPassword() {
   resetError.value = null;
@@ -229,15 +233,11 @@ async function resetPassword() {
     if (!response.ok) throw new Error(result.error || 'Unable to reset password.');
     authUser.value = { ...authUser.value, mustResetPassword: false };
     resetForm.value = { password: '', confirmation: '' };
-    await navigate(returnPath.value);
+    await navigate('/', { replace: true });
   } catch (error) {
     resetError.value = error.message;
   } finally {
     resetLoading.value = false;
-  }
-}
-  } finally {
-    authLoading.value = false;
   }
 }
 
@@ -298,8 +298,7 @@ async function login() {
     if (authUser.value.mustResetPassword) {
       setRoute('/reset-password');
     } else {
-      const destination = returnPath.value === '/admin' && !authUser.value.isAdministrator ? '/' : returnPath.value;
-      await navigate(destination);
+      await navigate('/');
     }
   } catch (error) {
     loginError.value = error.message;

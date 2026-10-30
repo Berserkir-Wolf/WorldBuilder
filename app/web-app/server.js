@@ -49,7 +49,7 @@ app.use(session({
     cookie: {
         httpOnly: true,
         sameSite: 'lax',
-        secure: process.env.NODE_ENV === 'production',
+        secure: process.env.NODE_ENV === 'production' ? 'auto' : false,
         maxAge: 1000 * 60 * 60 * 24 * 7
     }
 }));
