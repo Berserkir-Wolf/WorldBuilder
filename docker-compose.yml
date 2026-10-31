@@ -4,6 +4,9 @@ services:
     build:
       context: .
       dockerfile: app/web-app/dockerfile
+      platforms:
+        - linux/amd64
+      provenance: false
       args:
         APP_VERSION: ${APP_VERSION:-0.0.4}
       tags:
