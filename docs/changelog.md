@@ -10,7 +10,19 @@ Changes that have not yet been included in a versioned release.
 
 ### Added
 
-- Reserved for upcoming changes.
+- Added HTTP error-status activity logging for web requests (including 404 responses).
+
+### Changed
+
+- Updated Docker Compose defaults to use `berserkirwolf/worldbuilder:latest` without requiring `APP_VERSION` arguments.
+- Updated the Docker image build workflow to also tag successful version builds as `latest`.
+- Updated main navigation so the hamburger trigger is at top-left and opens as a left sidebar overlay.
+
+### Fixed
+
+- Fixed base URL seeding so `applicationsettings.baseurl` defaults to `/` only when missing and no longer overwrites existing values.
+- Fixed SPA startup routing so loading the raw configured base URL serves the application entry page reliably.
+- Fixed a frontend initialization-order issue that could leave the UI blank on load.
 
 ## [0.0.3]
 
