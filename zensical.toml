@@ -17,6 +17,11 @@ nav = [
     { "Markdown in 5min" = "reference/markdown-reference.md" },
     { "Zensical Reference" = "reference/zensical-reference.md" },
   ]},
+  { "About" = [
+    { "About WorldBuilder" = "about/about.md" },
+    { "Contributing" = "about/contributing.md" },
+    { "Changelog" = "changelog.md" },
+  ]},
 ]
 
 extra_css = ["stylesheets/extra.css"]

@@ -1,4 +1,6 @@
 const { PrismaClient } = require('@prisma/client');
+const { hashPassword } = require('../auth');
+const applicationVersion = require('../package.json').version;
 
 const prisma = new PrismaClient();
 const initialDatabaseVersion = '1.0.0';
@@ -14,23 +16,57 @@ async function upsertById(model, row) {
 }
 
 async function seedUsers() {
-  await prisma.user.upsert({
-    where: { email: 'alice@example.com' },
-    update: { name: 'Alice' },
-    create: { name: 'Alice', email: 'alice@example.com' }
-  });
+  const email = process.env.ADMIN_EMAIL || 'admin@example.com';
+  const password = process.env.ADMIN_PASSWORD || 'admin';
+  const existingUser = await prisma.user.findUnique({ where: { email } });
 
-  await prisma.user.upsert({
-    where: { email: 'bob@example.com' },
-    update: { name: 'Bob' },
-    create: { name: 'Bob', email: 'bob@example.com' }
-  });
+  if (!existingUser) {
+    await prisma.user.create({
+      data: {
+        name: 'admin',
+        email,
+        username: 'admin',
+        password: await hashPassword(password),
+        canWrite: true,
+        isAdministrator: true,
+        mustResetPassword: true
+      }
+    });
+    return;
+  }
+
+  if (!existingUser.password) {
+    await prisma.user.update({
+      where: { id: existingUser.id },
+      data: {
+        username: existingUser.username || 'admin',
+        password: await hashPassword(password),
+        canWrite: true,
+        isAdministrator: true,
+        mustResetPassword: true
+      }
+    });
+  } else if (!existingUser.isAdministrator || !existingUser.canWrite) {
+    await prisma.user.update({
+      where: { id: existingUser.id },
+      data: {
+        username: existingUser.username || 'admin',
+        canWrite: true,
+        isAdministrator: true
+      }
+    });
+  } else if (!existingUser.username) {
+    await prisma.user.update({
+      where: { id: existingUser.id },
+      data: { username: 'admin' }
+    });
+  }
 }
 
 async function seedApplicationSettings() {
   const settings = [
-    { settingName: 'appname', settingValue: 'My Application' },
-    { settingName: 'appversion', settingValue: '1.0.0' }
+    { settingName: 'appname', settingValue: 'WorldBuilder' },
+    { settingName: 'appversion', settingValue: applicationVersion }
   ];
 
   for (const setting of settings) {
@@ -38,6 +74,19 @@ async function seedApplicationSettings() {
       where: { settingName: setting.settingName },
       update: { settingValue: setting.settingValue },
       create: setting
+    });
+  }
+
+  const baseUrlSetting = await prisma.applicationSetting.findUnique({
+    where: { settingName: 'baseurl' }
+  });
+
+  if (!baseUrlSetting) {
+    await prisma.applicationSetting.create({
+      data: {
+        settingName: 'baseurl',
+        settingValue: '/'
+      }
     });
   }
 

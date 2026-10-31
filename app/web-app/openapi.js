@@ -166,16 +166,77 @@ function resourcePaths(resourceName) {
     };
 }
 
+const authPaths = {
+    '/api/auth/login': {
+        post: {
+            summary: 'Sign in',
+            operationId: 'login',
+            tags: ['authentication'],
+            security: [],
+            requestBody: {
+                required: true,
+                content: {
+                    'application/json': {
+                        schema: { $ref: '#/components/schemas/LoginRequest' }
+                    }
+                }
+            },
+            responses: {
+                200: {
+                    description: 'Authenticated successfully.',
+                    content: { 'application/json': { schema: { $ref: '#/components/schemas/LoginResponse' } } }
+                },
+                400: errorResponse,
+                401: errorResponse
+            }
+        }
+    },
+    '/api/auth/me': {
+        get: {
+            summary: 'Get the current user',
+            operationId: 'currentUser',
+            tags: ['authentication'],
+            responses: {
+                200: {
+                    description: 'Current authenticated user.',
+                    content: { 'application/json': { schema: { $ref: '#/components/schemas/LoginResponse' } } }
+                },
+                401: errorResponse
+            }
+        }
+    },
+    '/api/auth/logout': {
+        post: {
+            summary: 'Sign out',
+            operationId: 'logout',
+            tags: ['authentication'],
+            responses: { 204: { description: 'Signed out successfully.' } }
+        }
+    }
+};
+
 const paths = resourceNames.reduce((allPaths, resourceName) => ({
     ...allPaths,
     ...resourcePaths(resourceName)
-}), {});
+}), authPaths);
 
 const schemas = {
     Error: {
         type: 'object',
         required: ['error'],
         properties: { error: { type: 'string' } }
+    },
+    LoginRequest: {
+        type: 'object',
+        required: ['identifier', 'password'],
+        properties: {
+            identifier: { type: 'string', description: 'User email or username.' },
+            password: { type: 'string', format: 'password' }
+        }
+    },
+    LoginResponse: {
+        type: 'object',
+        properties: { user: { $ref: '#/components/schemas/users' } }
     }
 };
 
@@ -193,9 +254,19 @@ function createOpenApiDocument(basePath) {
             description: 'Express API for managing WorldBuilder database records.'
         },
         servers: [{ url: basePath || '/', description: 'Current application server' }],
-        tags: resourceNames.map((name) => ({ name })),
+        security: [{ cookieSession: [] }],
+        tags: [{ name: 'authentication' }, ...resourceNames.map((name) => ({ name }))],
         paths,
-        components: { schemas }
+        components: {
+            schemas,
+            securitySchemes: {
+                cookieSession: {
+                    type: 'apiKey',
+                    in: 'cookie',
+                    name: 'worldbuilder.session'
+                }
+            }
+        }
     };
 }
 

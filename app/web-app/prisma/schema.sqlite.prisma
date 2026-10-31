@@ -1,0 +1,88 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id       Int     @id @default(autoincrement())
+  name     String
+  email    String  @unique
+  username String?
+  password String?
+  canWrite Boolean @default(false) @map("can_write")
+  isAdministrator Boolean @default(false) @map("is_administrator")
+  mustResetPassword Boolean @default(false) @map("must_reset_password")
+  sessions Session[]
+
+  @@map("users")
+}
+
+model Session {
+  id        String   @id
+  userId    Int      @map("user_id")
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("sessions")
+}
+
+model ApplicationSetting {
+  id           Int     @id @default(autoincrement())
+  settingName  String  @unique @map("setting_name")
+  settingValue String? @map("setting_value")
+
+  @@map("applicationsettings")
+}
+
+model Location {
+  id             Int     @id @default(autoincrement())
+  name           String?
+  description    String?
+  parentLocation Int?    @map("parent_location")
+
+  @@map("locations")
+}
+
+model Character {
+  id       Int     @id @default(autoincrement())
+  name     String?
+  type     String?
+  role     String?
+  location Int?
+
+  @@map("characters")
+}
+
+model CharacterDetail {
+  id             Int     @id @default(autoincrement())
+  characterId    Int?    @map("character_id")
+  charisma       Int?
+  intelligence   Int?
+  wisdom         Int?
+  dexterity      Int?
+  constitution   Int?
+  strength       Int?
+  race           String?
+  characterClass String? @map("class")
+  level          Int?
+  alignment      String?
+
+  @@map("characterdetails")
+}
+
+model Reputation {
+  id         Int     @id @default(autoincrement())
+  characterId Int?   @map("character_ID")
+  targetId   Int?    @map("target_ID")
+  adjustment Int?
+  note       String?
+
+  @@map("reputation")
+}

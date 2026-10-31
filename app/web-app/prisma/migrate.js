@@ -1,12 +1,42 @@
 const { PrismaClient } = require('@prisma/client');
 
 const prisma = new PrismaClient();
-const currentDatabaseVersion = '1.0.0';
+const currentDatabaseVersion = '1.1.0';
 
 const migrations = [
   {
     version: '1.0.0',
     up: async () => {}
+  },
+  {
+    version: '1.1.0',
+    up: async (transaction) => {
+      const provider = process.env.DATABASE_PROVIDER || 'sqlite';
+      if (provider === 'mysql') {
+        const columns = await transaction.$queryRawUnsafe("SELECT COLUMN_NAME FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'users'");
+        const columnNames = columns.map((column) => column.COLUMN_NAME);
+        if (!columnNames.includes('can_write')) await transaction.$executeRawUnsafe('ALTER TABLE users ADD COLUMN can_write BOOLEAN NOT NULL DEFAULT FALSE');
+        if (!columnNames.includes('is_administrator')) await transaction.$executeRawUnsafe('ALTER TABLE users ADD COLUMN is_administrator BOOLEAN NOT NULL DEFAULT FALSE');
+        if (!columnNames.includes('must_reset_password')) await transaction.$executeRawUnsafe('ALTER TABLE users ADD COLUMN must_reset_password BOOLEAN NOT NULL DEFAULT FALSE');
+        const tables = await transaction.$queryRawUnsafe("SELECT TABLE_NAME FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = 'sessions'");
+        if (tables.length === 0) {
+          await transaction.$executeRawUnsafe('CREATE TABLE sessions (id VARCHAR(255) NOT NULL PRIMARY KEY, user_id INTEGER NOT NULL, expires_at DATETIME(3) NOT NULL, created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3), updated_at DATETIME(3) NOT NULL, CONSTRAINT sessions_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE ON UPDATE CASCADE)');
+          await transaction.$executeRawUnsafe('CREATE INDEX sessions_user_id_idx ON sessions(user_id)');
+        }
+        return;
+      }
+
+      const columns = await transaction.$queryRawUnsafe('PRAGMA table_info(users)');
+      const columnNames = columns.map((column) => column.name);
+      if (!columnNames.includes('can_write')) await transaction.$executeRawUnsafe('ALTER TABLE users ADD COLUMN can_write BOOLEAN NOT NULL DEFAULT 0');
+      if (!columnNames.includes('is_administrator')) await transaction.$executeRawUnsafe('ALTER TABLE users ADD COLUMN is_administrator BOOLEAN NOT NULL DEFAULT 0');
+      if (!columnNames.includes('must_reset_password')) await transaction.$executeRawUnsafe('ALTER TABLE users ADD COLUMN must_reset_password BOOLEAN NOT NULL DEFAULT 0');
+      const tables = await transaction.$queryRawUnsafe("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'sessions'");
+      if (tables.length === 0) {
+        await transaction.$executeRawUnsafe('CREATE TABLE sessions (id TEXT NOT NULL PRIMARY KEY, user_id INTEGER NOT NULL, expires_at DATETIME NOT NULL, created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at DATETIME NOT NULL, CONSTRAINT sessions_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE ON UPDATE CASCADE)');
+        await transaction.$executeRawUnsafe('CREATE INDEX sessions_user_id_idx ON sessions(user_id)');
+      }
+    }
   }
 ];
 
