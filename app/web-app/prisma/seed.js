@@ -77,6 +77,19 @@ async function seedApplicationSettings() {
     });
   }
 
+  const baseUrlSetting = await prisma.applicationSetting.findUnique({
+    where: { settingName: 'baseurl' }
+  });
+
+  if (!baseUrlSetting) {
+    await prisma.applicationSetting.create({
+      data: {
+        settingName: 'baseurl',
+        settingValue: '/'
+      }
+    });
+  }
+
   const databaseVersion = await prisma.applicationSetting.findUnique({
     where: { settingName: 'dbversion' }
   });

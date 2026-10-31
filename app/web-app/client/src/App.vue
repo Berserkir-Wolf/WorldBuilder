@@ -81,9 +81,9 @@ const resetForm = ref({ password: '', confirmation: '' });
 const resetError = ref(null);
 const resetLoading = ref(false);
 const appName = ref('WorldBuilder');
+const basePath = ref('');
 const page = ref(getPageForPath(window.location.pathname));
 const menuOpen = ref(false);
-const basePath = ref('');
 const returnPath = ref('/');
 const adminUsers = ref([]);
 const selectedAdminUserId = ref(null);
@@ -586,10 +586,10 @@ onMounted(() => {
 
   <template v-else>
   <header class="app-bar">
+    <button class="theme-button" type="button" aria-label="Open navigation" @click="menuOpen = !menuOpen">☰</button>
     <a class="app-name" href="/" @click.prevent="navigate('/')">{{ appName }}</a>
     <span class="header-actions">
       <span class="user-name">{{ authUser?.name || authUser?.email }}</span>
-      <button class="theme-button" type="button" aria-label="Open navigation" @click="menuOpen = !menuOpen">☰</button>
       <button class="theme-button" type="button" :title="`Switch to ${mode === 'light' ? 'dark' : 'light'} mode`" @click="$emit('toggle-mode')">
         {{ mode === 'light' ? '☾' : '☀' }}
       </button>
@@ -597,11 +597,13 @@ onMounted(() => {
     </span>
   </header>
 
-  <nav v-if="menuOpen" class="hamburger-menu card">
-    <button v-if="page !== 'view'" type="button" @click="navigateFromMenu('/')">Home</button>
-    <button v-if="canWrite && page !== 'edit'" type="button" @click="navigateFromMenu('/edit')">Edit</button>
-    <button v-if="authUser?.isAdministrator && page !== 'admin'" type="button" @click="navigateFromMenu('/admin')">Admin</button>
-  </nav>
+  <div v-if="menuOpen" class="menu-overlay" @click.self="menuOpen = false">
+    <nav class="hamburger-menu card">
+      <button v-if="page !== 'view'" type="button" @click="navigateFromMenu('/')">Home</button>
+      <button v-if="canWrite && page !== 'edit'" type="button" @click="navigateFromMenu('/edit')">Edit</button>
+      <button v-if="authUser?.isAdministrator && page !== 'admin'" type="button" @click="navigateFromMenu('/admin')">Admin</button>
+    </nav>
+  </div>
 
   <main v-if="page === 'view' || page === 'edit'" class="container">
     <label class="field table-field">
@@ -738,7 +740,8 @@ onMounted(() => {
 .app-name { color: inherit; text-decoration: none; font-weight: 700; }
 .header-actions { display: flex; align-items: center; gap: .75rem; } .user-name { font-size: .85rem; }
 .theme-button { border: 0; color: inherit; background: transparent; font-size: 1rem; cursor: pointer; }
-.hamburger-menu { display: flex; flex-wrap: wrap; gap: .75rem; max-width: 1200px; margin: 1rem auto 0; padding: 1rem 1.5rem; }
+.menu-overlay { position: fixed; inset: 0; background: #0006; z-index: 50; }
+.hamburger-menu { position: fixed; left: 0; top: 0; bottom: 0; z-index: 51; display: flex; flex-direction: column; gap: .75rem; width: min(320px, 85vw); margin: 0; padding: 1.5rem; border-radius: 0; }
 .auth-message { padding: 2rem; text-align: center; } .login-card { display: grid; gap: 1rem; max-width: 420px; margin: 4rem auto; } .error-message { color: #d32f2f; }
 .container { display: grid; gap: 1.5rem; max-width: 1200px; margin: 0 auto; padding: 2rem 1.5rem; }
 h1, h2 { margin: 0 0 .5rem; } h1 { font-size: 2rem; } h2 { font-size: 1.25rem; }

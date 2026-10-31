@@ -177,6 +177,15 @@ app.use(session({
     }
 }));
 
+app.use((req, res, next) => {
+    res.on('finish', () => {
+        if (res.statusCode >= 400) {
+            logActivity(`http_error ${res.statusCode} ${req.method} ${req.originalUrl} from ${getRequestIp(req)}`);
+        }
+    });
+    next();
+});
+
 if (process.env.NODE_ENV === 'production' && !process.env.SESSION_SECRET) {
     console.warn('SESSION_SECRET is not set; configure it before using authentication in production.');
 }
@@ -595,6 +604,7 @@ apiRouter.delete('/:resource/:id', requireResourceWriteAccess, async (req, res) 
 
 function mountApplicationRoutes(currentBasePath) {
     const openApiDocument = createOpenApiDocument(currentBasePath);
+    const appRootPath = currentBasePath || '/';
 
     app.use(`${currentBasePath}/api/auth`, authRouter);
     app.use(`${currentBasePath}/api/admin`, adminRouter);
@@ -610,11 +620,12 @@ function mountApplicationRoutes(currentBasePath) {
             customSiteTitle: 'WorldBuilder API documentation'
         })
     );
+    app.get(appRootPath, (req, res) => res.sendFile(path.join(publicDirectory, 'index.html')));
     app.get(`${currentBasePath}/login`, (req, res) => res.sendFile(path.join(publicDirectory, 'index.html')));
     app.get(`${currentBasePath}/reset-password`, (req, res) => res.sendFile(path.join(publicDirectory, 'index.html')));
     app.get(`${currentBasePath}/edit`, (req, res) => res.sendFile(path.join(publicDirectory, 'index.html')));
     app.get(`${currentBasePath}/admin`, (req, res) => res.sendFile(path.join(publicDirectory, 'index.html')));
-    app.use(currentBasePath || '/', express.static(publicDirectory));
+    app.use(appRootPath, express.static(publicDirectory));
 }
 
 async function start() {

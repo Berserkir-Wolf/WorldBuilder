@@ -1,11 +1,9 @@
 services:
   web:
-    image: berserkirwolf/worldbuilder:${APP_VERSION:-0.0.3}
+    image: berserkirwolf/worldbuilder:latest
     build:
       context: .
       dockerfile: app/web-app/dockerfile
-      args:
-        APP_VERSION: ${APP_VERSION:-0.0.3}
     ports:
       - "8080:3000"
     environment:
