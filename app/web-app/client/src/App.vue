@@ -526,6 +526,12 @@ function editRecord(record) {
   form.value = Object.fromEntries(definition.value.fields.map((field) => [field.name, formatValue(record[field.name])]));
 }
 
+async function editRecordFromView(record) {
+  if (!canWrite.value) return;
+  await navigate('/edit');
+  editRecord(record);
+}
+
 async function deleteRecord(id) {
   if (!canWrite.value || !window.confirm('Delete this record?')) return;
   try {
@@ -599,9 +605,9 @@ onMounted(() => {
 
   <div v-if="menuOpen" class="menu-overlay" @click.self="menuOpen = false">
     <nav class="hamburger-menu card">
-      <button v-if="page !== 'view'" type="button" @click="navigateFromMenu('/')">Home</button>
-      <button v-if="canWrite && page !== 'edit'" type="button" @click="navigateFromMenu('/edit')">Edit</button>
-      <button v-if="authUser?.isAdministrator && page !== 'admin'" type="button" @click="navigateFromMenu('/admin')">Admin</button>
+      <button type="button" @click="navigateFromMenu('/')">Home</button>
+      <button v-if="canWrite" type="button" @click="navigateFromMenu('/edit')">Edit</button>
+      <button v-if="authUser?.isAdministrator" type="button" @click="navigateFromMenu('/admin')">Admin</button>
     </nav>
   </div>
 
@@ -639,7 +645,7 @@ onMounted(() => {
       <div v-for="record in records" v-else :key="record.id" class="record">
         <span>{{ definition.fields.map((field) => `${field.label}: ${formatValue(record[field.name])}`).join(' · ') }}</span>
         <span class="record-actions">
-           <button v-if="page === 'edit' && canWrite" type="button" title="Edit" @click="editRecord(record)">Edit</button>
+           <button v-if="canWrite" type="button" title="Edit" @click="page === 'view' ? editRecordFromView(record) : editRecord(record)">Edit</button>
            <button v-if="page === 'edit' && canWrite" class="danger" type="button" title="Delete" @click="deleteRecord(record.id)">Delete</button>
         </span>
       </div>
