@@ -1267,16 +1267,6 @@ onMounted(() => {
             </v-card-text>
           </v-card>
 
-          <v-card class="mb-4">
-            <v-card-title>{{ page === 'edit' ? 'Database editor' : 'Database viewer' }}</v-card-title>
-            <v-card-text class="text-medium-emphasis">
-              {{ page === 'edit' ? 'Edit records across the WorldBuilder database.' : 'View records across the WorldBuilder database.' }}
-            </v-card-text>
-            <v-card-actions v-if="page === 'edit' && canWrite && canEditCurrentTable">
-              <v-btn color="primary" prepend-icon="mdi-plus" @click="startAddRecord">Add</v-btn>
-            </v-card-actions>
-          </v-card>
-
           <v-card v-if="page === 'edit' && canWrite && canEditCurrentTable && showEditorForm" class="mb-4">
             <v-card-title>{{ editingId === null ? 'Add' : 'Edit' }} {{ definition.label }}</v-card-title>
             <v-card-text>
@@ -1497,6 +1487,16 @@ onMounted(() => {
               </template>
             </v-card-text>
           </v-card>
+
+          <v-btn
+            v-if="page === 'edit' && canWrite && canEditCurrentTable"
+            icon="mdi-plus"
+            color="primary"
+            size="large"
+            elevation="8"
+            class="edit-fab"
+            @click="startAddRecord"
+          />
         </v-container>
 
         <v-container v-else class="py-6">
@@ -1633,5 +1633,12 @@ onMounted(() => {
 
 .user-name {
   opacity: .9;
+}
+
+.edit-fab {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 20;
 }
 </style>
