@@ -11,6 +11,7 @@
 - Place the hamburger menu at the top-left position.
 - Use a darker header color in dark mode for better contrast and readability of white text.
 - Edit navigation buttons must use plural routes: `/edit/characters` and `/edit/locations`.
+- Do not display inline 'Edit' or 'View' headings on relevant pages.
 
 ## Version Control Guidelines
 - Only create Git commits when explicitly and manually instructed by the user; do not auto-commit after making changes.
