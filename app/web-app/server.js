@@ -441,6 +441,8 @@ authRouter.post('/reset-password', async (req, res) => {
     return res.status(204).send();
 });
 
+const characterTypes = ['Player Character', 'DM Character', 'NPC', 'Guild', 'Military', 'Business', 'Misc'];
+
 const resources = {
     users: {
         delegate: 'user',
@@ -472,7 +474,8 @@ const resources = {
             name: 'string',
             type: 'string',
             role: 'string',
-            location: 'number'
+            location: 'number',
+            affiliation: 'number'
         }
     },
     characterdetails: {
@@ -497,6 +500,20 @@ const resources = {
             characterId: 'number',
             targetId: 'number',
             adjustment: 'number',
+            note: 'string'
+        }
+    },
+    characternotes: {
+        delegate: 'characterNote',
+        fields: {
+            characterId: 'number',
+            note: 'string'
+        }
+    },
+    locationnotes: {
+        delegate: 'locationNote',
+        fields: {
+            locationId: 'number',
             note: 'string'
         }
     }
@@ -536,6 +553,12 @@ async function getPayload(resource, body) {
 
     if (resource.delegate === 'user' && Object.prototype.hasOwnProperty.call(payload, 'password') && payload.password) {
         payload.password = await hashPassword(payload.password);
+    }
+
+    if (resource.delegate === 'character' && Object.prototype.hasOwnProperty.call(payload, 'type') && payload.type !== null) {
+        if (!characterTypes.includes(payload.type)) {
+            throw new Error(`type must be one of: ${characterTypes.join(', ')}.`);
+        }
     }
 
     return payload;
@@ -633,9 +656,14 @@ function mountApplicationRoutes(currentBasePath) {
         })
     );
     app.get(appRootPath, (req, res) => res.sendFile(path.join(publicDirectory, 'index.html')));
+    app.get(`${currentBasePath}/character`, (req, res) => res.sendFile(path.join(publicDirectory, 'index.html')));
+    app.get(`${currentBasePath}/location`, (req, res) => res.sendFile(path.join(publicDirectory, 'index.html')));
+    app.get(`${currentBasePath}/view`, (req, res) => res.sendFile(path.join(publicDirectory, 'index.html')));
+    app.get(`${currentBasePath}/view/:table`, (req, res) => res.sendFile(path.join(publicDirectory, 'index.html')));
     app.get(`${currentBasePath}/login`, (req, res) => res.sendFile(path.join(publicDirectory, 'index.html')));
     app.get(`${currentBasePath}/reset-password`, (req, res) => res.sendFile(path.join(publicDirectory, 'index.html')));
-    app.get(`${currentBasePath}/edit`, (req, res) => res.sendFile(path.join(publicDirectory, 'index.html')));
+    app.get(`${currentBasePath}/edit/characters`, (req, res) => res.sendFile(path.join(publicDirectory, 'index.html')));
+    app.get(`${currentBasePath}/edit/locations`, (req, res) => res.sendFile(path.join(publicDirectory, 'index.html')));
     app.get(`${currentBasePath}/admin`, (req, res) => res.sendFile(path.join(publicDirectory, 'index.html')));
     app.use(appRootPath, express.static(publicDirectory));
 }

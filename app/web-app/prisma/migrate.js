@@ -1,7 +1,7 @@
 const { PrismaClient } = require('@prisma/client');
 
 const prisma = new PrismaClient();
-const currentDatabaseVersion = '1.1.0';
+const currentDatabaseVersion = '1.3.0';
 
 const migrations = [
   {
@@ -35,6 +35,56 @@ const migrations = [
       if (tables.length === 0) {
         await transaction.$executeRawUnsafe('CREATE TABLE sessions (id TEXT NOT NULL PRIMARY KEY, user_id INTEGER NOT NULL, expires_at DATETIME NOT NULL, created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at DATETIME NOT NULL, CONSTRAINT sessions_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE ON UPDATE CASCADE)');
         await transaction.$executeRawUnsafe('CREATE INDEX sessions_user_id_idx ON sessions(user_id)');
+      }
+    }
+  },
+  {
+    version: '1.2.0',
+    up: async (transaction) => {
+      const provider = process.env.DATABASE_PROVIDER || 'sqlite';
+      if (provider === 'mysql') {
+        const columns = await transaction.$queryRawUnsafe("SELECT COLUMN_NAME FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'characters'");
+        const columnNames = columns.map((column) => column.COLUMN_NAME);
+        if (!columnNames.includes('affiliation')) {
+          await transaction.$executeRawUnsafe('ALTER TABLE characters ADD COLUMN affiliation INTEGER NULL');
+        }
+        return;
+      }
+
+      const columns = await transaction.$queryRawUnsafe('PRAGMA table_info(characters)');
+      const columnNames = columns.map((column) => column.name);
+      if (!columnNames.includes('affiliation')) {
+        await transaction.$executeRawUnsafe('ALTER TABLE characters ADD COLUMN affiliation INTEGER');
+      }
+    }
+  },
+  {
+    version: '1.3.0',
+    up: async (transaction) => {
+      const provider = process.env.DATABASE_PROVIDER || 'sqlite';
+      if (provider === 'mysql') {
+        const tables = await transaction.$queryRawUnsafe("SELECT TABLE_NAME FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name IN ('characternotes', 'locationnotes')");
+        const existingTables = new Set(tables.map((table) => table.TABLE_NAME));
+
+        if (!existingTables.has('characternotes')) {
+          await transaction.$executeRawUnsafe('CREATE TABLE characternotes (id INTEGER NOT NULL AUTO_INCREMENT PRIMARY KEY, character_id INTEGER NULL, note TEXT NULL)');
+        }
+
+        if (!existingTables.has('locationnotes')) {
+          await transaction.$executeRawUnsafe('CREATE TABLE locationnotes (id INTEGER NOT NULL AUTO_INCREMENT PRIMARY KEY, location_id INTEGER NULL, note TEXT NULL)');
+        }
+        return;
+      }
+
+      const tables = await transaction.$queryRawUnsafe("SELECT name FROM sqlite_master WHERE type = 'table' AND name IN ('characternotes', 'locationnotes')");
+      const existingTables = new Set(tables.map((table) => table.name));
+
+      if (!existingTables.has('characternotes')) {
+        await transaction.$executeRawUnsafe('CREATE TABLE characternotes (id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, character_id INTEGER, note TEXT)');
+      }
+
+      if (!existingTables.has('locationnotes')) {
+        await transaction.$executeRawUnsafe('CREATE TABLE locationnotes (id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, location_id INTEGER, note TEXT)');
       }
     }
   }

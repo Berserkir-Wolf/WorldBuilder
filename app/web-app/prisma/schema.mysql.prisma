@@ -56,6 +56,7 @@ model Character {
   type     String?
   role     String?
   location Int?
+  affiliation Int?
 
   @@map("characters")
 }
@@ -85,4 +86,20 @@ model Reputation {
   note       String?
 
   @@map("reputation")
+}
+
+model CharacterNote {
+  id          Int     @id @default(autoincrement())
+  characterId Int?    @map("character_id")
+  note        String?
+
+  @@map("characternotes")
+}
+
+model LocationNote {
+  id         Int     @id @default(autoincrement())
+  locationId Int?    @map("location_id")
+  note       String?
+
+  @@map("locationnotes")
 }
