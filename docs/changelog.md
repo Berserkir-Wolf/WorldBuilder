@@ -8,6 +8,28 @@ The application version is maintained in [`app/web-app/package.json`](https://gi
 
 Changes that have not yet been included in a versioned release.
 
+## [0.0.5] - 2026-11-01
+
+Session notes, dedicated view/edit routes, and viewer/edit navigation refinements.
+
+### Added
+
+- Added a `sessionnotes` database table and Prisma model with auto-incrementing `id`, auto-populated `created_at` datetime, and large-text `notes` content.
+- Added database migration `1.4.0` to create `sessionnotes` for SQLite and MySQL.
+- Added backend API resource support for session notes (`/api/sessionnotes`).
+- Added dedicated frontend routes for session notes viewing and editing: `/sessions` and `/edit/sessions`.
+
+### Changed
+
+- Updated viewer-page navigation to include a Sessions link alongside Character and Location.
+- Updated edit-page navigation to include direct access to `/edit/sessions`.
+- Updated the sessions viewer to render full session entries directly (datetime header + full notes body) instead of a separate selectable list/detail split.
+- Removed the "Tables" heading above the view/edit navigation button row.
+
+### Fixed
+
+- Fixed duplicate session entry display on the sessions viewer page.
+
 ## [0.0.4] - 2026-11-01
 
 Navigation, routing, Docker, SQLite URL handling, and Material UI updates.

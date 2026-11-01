@@ -1,7 +1,7 @@
 const { PrismaClient } = require('@prisma/client');
 
 const prisma = new PrismaClient();
-const currentDatabaseVersion = '1.3.0';
+const currentDatabaseVersion = '1.4.0';
 
 const migrations = [
   {
@@ -85,6 +85,24 @@ const migrations = [
 
       if (!existingTables.has('locationnotes')) {
         await transaction.$executeRawUnsafe('CREATE TABLE locationnotes (id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, location_id INTEGER, note TEXT)');
+      }
+    }
+  },
+  {
+    version: '1.4.0',
+    up: async (transaction) => {
+      const provider = process.env.DATABASE_PROVIDER || 'sqlite';
+      if (provider === 'mysql') {
+        const tables = await transaction.$queryRawUnsafe("SELECT TABLE_NAME FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = 'sessionnotes'");
+        if (!tables.length) {
+          await transaction.$executeRawUnsafe('CREATE TABLE sessionnotes (id INTEGER NOT NULL AUTO_INCREMENT PRIMARY KEY, created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3), notes LONGTEXT NULL)');
+        }
+        return;
+      }
+
+      const tables = await transaction.$queryRawUnsafe("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'sessionnotes'");
+      if (!tables.length) {
+        await transaction.$executeRawUnsafe('CREATE TABLE sessionnotes (id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, notes TEXT)');
       }
     }
   }

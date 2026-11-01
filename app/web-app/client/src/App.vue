@@ -63,6 +63,13 @@ const tableDefinitions = {
       { name: 'adjustment', label: 'Adjustment', type: 'number' },
       { name: 'note', label: 'Note', multiline: true }
     ]
+  },
+  sessionnotes: {
+    label: 'Session notes',
+    fields: [
+      { name: 'createdAt', label: 'Created at', readonly: true },
+      { name: 'notes', label: 'Notes', multiline: true }
+    ]
   }
 };
 
@@ -116,9 +123,9 @@ const reputationForm = ref({ targetId: '', adjustment: '', note: '' });
 const definition = computed(() => tableDefinitions[tableName.value]);
 const databaseTables = computed(() => Object.entries(tableDefinitions).filter(([name]) => !['users', 'applicationsettings'].includes(name)));
 const databaseTableNames = computed(() => databaseTables.value.map(([name]) => name));
-const viewNavigationTableNames = ['characters', 'locations'];
-const editableTableNames = ['characters', 'locations'];
-const editNavigationTableNames = ['characters', 'locations'];
+const viewNavigationTableNames = ['characters', 'locations', 'sessionnotes'];
+const editableTableNames = ['characters', 'locations', 'sessionnotes'];
+const editNavigationTableNames = ['characters', 'locations', 'sessionnotes'];
 const editTables = computed(() => databaseTables.value.filter(([name]) => editableTableNames.includes(name)));
 const viewTables = computed(() => databaseTables.value.filter(([name]) => viewNavigationTableNames.includes(name)));
 const editNavigationTables = computed(() => databaseTables.value.filter(([name]) => editNavigationTableNames.includes(name)));
@@ -233,11 +240,13 @@ function getNavigationLabel(name, table) {
   if (!isEditPage.value) {
     if (name === 'characters') return 'Character';
     if (name === 'locations') return 'Location';
+    if (name === 'sessionnotes') return 'Sessions';
     return table.label;
   }
 
   if (name === 'characters') return 'Character';
   if (name === 'locations') return 'Location';
+  if (name === 'sessionnotes') return 'Sessions';
   return table.label;
 }
 
@@ -258,11 +267,11 @@ function getReputationDescriptor(score) {
 
 function getPageForPath(path) {
   const relativePath = getRelativePath(path);
-  if (relativePath === '/' || relativePath === '/character' || relativePath === '/location' || relativePath === '/view' || relativePath.startsWith('/view/')) return 'view';
+  if (relativePath === '/' || relativePath === '/character' || relativePath === '/location' || relativePath === '/sessions' || relativePath === '/view' || relativePath.startsWith('/view/')) return 'view';
   if (relativePath === '/login') return 'login';
   if (relativePath === '/reset-password') return 'reset-password';
   if (relativePath === '/admin') return 'admin';
-  if (relativePath === '/edit/characters' || relativePath === '/edit/locations') return 'edit';
+  if (relativePath === '/edit/characters' || relativePath === '/edit/locations' || relativePath === '/edit/sessions') return 'edit';
   return 'view';
 }
 
@@ -270,8 +279,10 @@ function getTableFromPath(path) {
   const relativePath = getRelativePath(path);
   if (relativePath === '/' || relativePath === '/character') return 'characters';
   if (relativePath === '/location') return 'locations';
+  if (relativePath === '/sessions') return 'sessionnotes';
   if (relativePath === '/edit/characters') return 'characters';
   if (relativePath === '/edit/locations') return 'locations';
+  if (relativePath === '/edit/sessions') return 'sessionnotes';
   const match = relativePath.match(/^\/view\/([^/]+)$/);
   if (!match) return null;
   const candidate = decodeURIComponent(match[1]);
@@ -294,7 +305,7 @@ function syncTableFromPath(path) {
 
 function detectBasePathFromLocation() {
   const pathname = window.location.pathname.replace(/\/$/, '') || '/';
-  const routeRoots = ['/login', '/reset-password', '/admin', '/edit', '/view', '/character', '/location'];
+  const routeRoots = ['/login', '/reset-password', '/admin', '/edit', '/view', '/character', '/location', '/sessions'];
 
   for (const routeRoot of routeRoots) {
     if (pathname === routeRoot || pathname.startsWith(`${routeRoot}/`)) return '';
@@ -351,11 +362,13 @@ function tablePagePath(name, targetPage = page.value) {
   if (targetPage === 'view') {
     if (name === 'characters') return '/character';
     if (name === 'locations') return '/location';
+    if (name === 'sessionnotes') return '/sessions';
   }
 
   if (targetPage === 'edit') {
     if (name === 'characters') return '/edit/characters';
     if (name === 'locations') return '/edit/locations';
+    if (name === 'sessionnotes') return '/edit/sessions';
     return '/edit/characters';
   }
 
@@ -368,7 +381,7 @@ function apiUrl(name) {
 }
 
 function emptyForm(table) {
-  return Object.fromEntries(table.fields.filter((field) => field.name !== 'id').map((field) => [field.name, '']));
+  return Object.fromEntries(table.fields.filter((field) => field.name !== 'id' && !field.readonly).map((field) => [field.name, '']));
 }
 
 function emptyCharacterDetailsForm() {
@@ -384,7 +397,7 @@ function formatValue(value) {
 }
 
 function editableFields(table) {
-  return table.fields.filter((field) => field.name !== 'id');
+  return table.fields.filter((field) => field.name !== 'id' && !field.readonly);
 }
 
 function usesSelectField(field) {
@@ -640,7 +653,7 @@ async function resolveRoute() {
     return;
   }
 
-  if (path === '/edit/characters' || path === '/edit/locations') {
+  if (path === '/edit/characters' || path === '/edit/locations' || path === '/edit/sessions') {
     if (!authUser.value?.canWrite) {
       setRoute('/');
       await loadRecords();
@@ -652,7 +665,7 @@ async function resolveRoute() {
     return;
   }
 
-  if (path === '/' || path === '/character' || path === '/location' || path === '/view' || path.startsWith('/view/')) {
+  if (path === '/' || path === '/character' || path === '/location' || path === '/sessions' || path === '/view' || path.startsWith('/view/')) {
     setRoute(path === '/view' ? '/' : path);
     await loadRecords();
     return;
@@ -669,7 +682,7 @@ async function navigateFromUser(path) {
 
 async function navigateFromMenu(path) {
   if (path === '/admin' && !authUser.value?.isAdministrator) return;
-  if (path === '/edit/characters' && !canWrite.value) return;
+  if ((path === '/edit/characters' || path === '/edit/sessions') && !canWrite.value) return;
   await navigate(path);
 }
 
@@ -1050,7 +1063,7 @@ async function saveRecord() {
   if (!canWrite.value || !canEditCurrentTable.value) return;
   const payload = {};
   definition.value.fields.forEach((field) => {
-    if (field.name === 'id') return;
+    if (field.name === 'id' || field.readonly) return;
     const value = form.value[field.name];
     payload[field.name] = field.type === 'number' ? (value === '' ? null : Number(value)) : (value === '' ? null : value);
   });
@@ -1234,6 +1247,12 @@ onMounted(() => {
               @click="navigateFromLink($event, '/location')"
             />
             <v-list-item
+              title="Sessions"
+              prepend-icon="mdi-notebook"
+              :href="routeHref('/sessions')"
+              @click="navigateFromLink($event, '/sessions')"
+            />
+            <v-list-item
               v-if="canWrite"
               title="Edit"
               prepend-icon="mdi-pencil"
@@ -1252,7 +1271,6 @@ onMounted(() => {
 
         <v-container v-if="page === 'view' || page === 'edit'" class="py-6">
           <v-card class="mb-4">
-            <v-card-title>Tables</v-card-title>
             <v-card-text class="d-flex flex-wrap ga-2">
               <v-btn
                 v-for="[name, table] in tableNavigationTables"
@@ -1455,7 +1473,17 @@ onMounted(() => {
                     </v-card-actions>
                   </v-card>
                 </template>
-                <v-list v-else-if="filteredRecords.length" lines="two">
+                <template v-else-if="page === 'view' && tableName === 'sessionnotes'">
+                  <v-card v-for="entry in records" :key="`session-note-${entry.id}`" variant="tonal" class="mb-4">
+                    <v-card-title>{{ formatValue(entry.createdAt) }}</v-card-title>
+                    <v-card-text style="white-space: pre-wrap;">{{ entry.notes || 'No notes.' }}</v-card-text>
+                    <v-card-actions v-if="canWrite">
+                      <v-btn variant="outlined" @click="editRecordFromView(entry)">Edit session note</v-btn>
+                    </v-card-actions>
+                  </v-card>
+                  <v-alert v-if="!records.length" type="info" variant="tonal">No records found.</v-alert>
+                </template>
+                <v-list v-else-if="tableName !== 'sessionnotes' && filteredRecords.length" lines="two">
                   <v-list-item v-for="record in filteredRecords" :key="record.id">
                     <template #title>
                       {{ definition.fields.map((field) => `${field.label}: ${formatValue(record[field.name])}`).join(' · ') }}
@@ -1483,7 +1511,7 @@ onMounted(() => {
                     </template>
                   </v-list-item>
                 </v-list>
-                <v-alert v-else type="info" variant="tonal">No records found.</v-alert>
+                <v-alert v-else-if="tableName !== 'sessionnotes'" type="info" variant="tonal">No records found.</v-alert>
               </template>
             </v-card-text>
           </v-card>

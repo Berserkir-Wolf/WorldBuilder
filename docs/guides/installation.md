@@ -96,6 +96,22 @@ environment:
 
 The administrator password is hashed before it is stored. Existing plaintext passwords are upgraded to scrypt hashes after a successful login. All database API routes require a signed session cookie; only `/api/auth/login`, `/api/auth/me`, and `/api/auth/logout` are unauthenticated endpoints. Authenticated users can change their password from the user menu in the top bar; password changes require the current password and a new password.
 
+### Application pages and navigation
+
+After signing in, the main navigation includes links for:
+
+- `/character` for character viewing
+- `/location` for location viewing
+- `/sessions` for session notes viewing
+
+Users with write permissions also have edit routes:
+
+- `/edit/characters`
+- `/edit/locations`
+- `/edit/sessions`
+
+The `/sessions` page displays each session note entry directly using the entry datetime as the header and the full notes text as the body.
+
 ### Database migrations
 
 The application stores the current database version in the `dbversion` row of `applicationsettings`. On startup, Prisma synchronizes the models, seeds missing baseline data, and applies pending application migrations in `app/web-app/prisma/migrate.js`.

@@ -103,3 +103,11 @@ model LocationNote {
 
   @@map("locationnotes")
 }
+
+model SessionNote {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now()) @map("created_at")
+  notes     String?
+
+  @@map("sessionnotes")
+}

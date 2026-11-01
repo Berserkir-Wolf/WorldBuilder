@@ -516,6 +516,12 @@ const resources = {
             locationId: 'number',
             note: 'string'
         }
+    },
+    sessionnotes: {
+        delegate: 'sessionNote',
+        fields: {
+            notes: 'string'
+        }
     }
 };
 
@@ -658,12 +664,14 @@ function mountApplicationRoutes(currentBasePath) {
     app.get(appRootPath, (req, res) => res.sendFile(path.join(publicDirectory, 'index.html')));
     app.get(`${currentBasePath}/character`, (req, res) => res.sendFile(path.join(publicDirectory, 'index.html')));
     app.get(`${currentBasePath}/location`, (req, res) => res.sendFile(path.join(publicDirectory, 'index.html')));
+    app.get(`${currentBasePath}/sessions`, (req, res) => res.sendFile(path.join(publicDirectory, 'index.html')));
     app.get(`${currentBasePath}/view`, (req, res) => res.sendFile(path.join(publicDirectory, 'index.html')));
     app.get(`${currentBasePath}/view/:table`, (req, res) => res.sendFile(path.join(publicDirectory, 'index.html')));
     app.get(`${currentBasePath}/login`, (req, res) => res.sendFile(path.join(publicDirectory, 'index.html')));
     app.get(`${currentBasePath}/reset-password`, (req, res) => res.sendFile(path.join(publicDirectory, 'index.html')));
     app.get(`${currentBasePath}/edit/characters`, (req, res) => res.sendFile(path.join(publicDirectory, 'index.html')));
     app.get(`${currentBasePath}/edit/locations`, (req, res) => res.sendFile(path.join(publicDirectory, 'index.html')));
+    app.get(`${currentBasePath}/edit/sessions`, (req, res) => res.sendFile(path.join(publicDirectory, 'index.html')));
     app.get(`${currentBasePath}/admin`, (req, res) => res.sendFile(path.join(publicDirectory, 'index.html')));
     app.use(appRootPath, express.static(publicDirectory));
 }
