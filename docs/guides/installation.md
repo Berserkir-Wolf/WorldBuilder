@@ -37,10 +37,10 @@ services:
       context: .
       dockerfile: app/web-app/dockerfile
       args:
-        APP_VERSION: ${APP_VERSION:-0.0.4}
+        APP_VERSION: ${APP_VERSION:-0.0.5}
       tags:
         - berserkirwolf/worldbuilder:latest
-        - berserkirwolf/worldbuilder:${APP_VERSION:-0.0.4}
+        - berserkirwolf/worldbuilder:${APP_VERSION:-0.0.5}
     ports:
       - "8080:3000"
     environment:
