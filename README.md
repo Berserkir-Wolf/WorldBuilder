@@ -25,7 +25,7 @@ TODO:
 - [ ] Add a file upload feature for images and other media attached to locations and characters
 - [ ] Add a "descriptions" field to locations and characters for long-form text
 - [ ] Add email support for password reset and session notes sharing
-- [-] Add a "reputation" system for characters to track relationships and alliances
+- [X Add a "reputation" system for characters to track relationships and alliances
 - [ ] Add auto-calculated modifier fields for reputation and other stats
 - [X] Add a "session notes" feature for tracking campaign sessions and events
 - [ ] Add a "campaigns" feature for tracking multiple campaigns and their associated characters, locations, and session notes
@@ -36,4 +36,4 @@ TODO:
 - [ ] Add ability to export and import campaign data in JSON format for backup and sharing purposes. Potentially also include application settings for database connection, email server, and other backend settings.
 - [ ] Add a "settings" feature for tracking application settings and preferences, including user preferences for dark mode, language, and other UI settings. 
 - [ ] Add a "users" feature for tracking users and their associated characters, locations, quests, items, and session notes. This will also include user permissions and roles for access control, as well as attaching what campaign they have access to.
-- [ ] 
+- [ ] Probably more I'm forgetting, but this is a start.  I will update this as I think of more features to add.
