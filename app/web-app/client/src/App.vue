@@ -120,6 +120,9 @@ const selectedLocationId = ref(null);
 const characterNoteForm = ref({ note: '' });
 const locationNoteForm = ref({ note: '' });
 const reputationForm = ref({ targetId: '', adjustment: '', note: '' });
+const showCharacterNoteDialog = ref(false);
+const showLocationNoteDialog = ref(false);
+const showReputationDialog = ref(false);
 const definition = computed(() => tableDefinitions[tableName.value]);
 const databaseTables = computed(() => Object.entries(tableDefinitions).filter(([name]) => !['users', 'applicationsettings'].includes(name)));
 const databaseTableNames = computed(() => databaseTables.value.map(([name]) => name));
@@ -479,6 +482,7 @@ async function addCharacterNote() {
   const result = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(result.error || 'Unable to add character note.');
   characterNoteForm.value.note = '';
+  showCharacterNoteDialog.value = false;
   await loadLinkedViewData();
 }
 
@@ -498,6 +502,7 @@ async function addLocationNote() {
   const result = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(result.error || 'Unable to add location note.');
   locationNoteForm.value.note = '';
+  showLocationNoteDialog.value = false;
   await loadLinkedViewData();
 }
 
@@ -512,6 +517,12 @@ async function addCharacterReputation() {
     message.value = { severity: 'error', text: 'Target character is required.' };
     return;
   }
+
+function openLocationNoteDialog() {
+  if (!canWrite.value || !selectedLocation.value) return;
+  locationNoteForm.value.note = '';
+  showLocationNoteDialog.value = true;
+}
   if (adjustment === null || Number.isNaN(adjustment)) {
     message.value = { severity: 'error', text: 'Adjustment is required.' };
     return;
@@ -526,7 +537,20 @@ async function addCharacterReputation() {
   if (!response.ok) throw new Error(result.error || 'Unable to add reputation entry.');
 
   reputationForm.value = { targetId: '', adjustment: '', note: '' };
+  showReputationDialog.value = false;
   await loadLinkedViewData();
+}
+
+function openCharacterNoteDialog() {
+  if (!canWrite.value || !selectedCharacter.value) return;
+  characterNoteForm.value.note = '';
+  showCharacterNoteDialog.value = true;
+}
+
+function openReputationDialog() {
+  if (!canWrite.value || !selectedCharacter.value) return;
+  reputationForm.value = { targetId: '', adjustment: '', note: '' };
+  showReputationDialog.value = true;
 }
 
 function openReputationEntryDetails(targetId) {
@@ -1059,6 +1083,14 @@ function startAddRecord() {
   showEditorForm.value = true;
 }
 
+async function openCreateForCurrentView() {
+  if (!canWrite.value || !canEditCurrentTable.value) return;
+  if (page.value === 'view') {
+    await navigate(tablePagePath(tableName.value, 'edit'));
+  }
+  startAddRecord();
+}
+
 async function saveRecord() {
   if (!canWrite.value || !canEditCurrentTable.value) return;
   const payload = {};
@@ -1400,23 +1432,13 @@ onMounted(() => {
                     </v-card-actions>
                   </v-card>
                   <v-card v-if="canWrite && selectedCharacter" class="mb-4">
-                    <v-card-title>Add character note</v-card-title>
-                    <v-card-text>
-                      <v-textarea v-model="characterNoteForm.note" label="Note" variant="outlined" rows="3" />
-                    </v-card-text>
                     <v-card-actions>
-                      <v-btn color="primary" @click="addCharacterNote">Add note</v-btn>
+                      <v-btn color="primary" variant="outlined" @click="openCharacterNoteDialog">Add note</v-btn>
                     </v-card-actions>
                   </v-card>
                   <v-card v-if="canWrite && selectedCharacter">
-                    <v-card-title>Add reputation entry</v-card-title>
-                    <v-card-text>
-                      <v-select v-model="reputationForm.targetId" :items="characterSelectItems" label="Target character" variant="outlined" class="mb-3" />
-                      <v-text-field v-model="reputationForm.adjustment" label="Adjustment" type="number" variant="outlined" class="mb-3" />
-                      <v-textarea v-model="reputationForm.note" label="Note" rows="3" variant="outlined" />
-                    </v-card-text>
                     <v-card-actions>
-                      <v-btn color="primary" @click="addCharacterReputation">Add reputation</v-btn>
+                      <v-btn color="primary" variant="outlined" @click="openReputationDialog">Add reputation entry</v-btn>
                     </v-card-actions>
                   </v-card>
                   <v-card v-if="selectedCharacter && selectedReputationEntries.length" class="mb-4">
@@ -1464,25 +1486,24 @@ onMounted(() => {
                     </v-card-actions>
                   </v-card>
                   <v-card v-if="canWrite && selectedLocation">
-                    <v-card-title>Add location note</v-card-title>
-                    <v-card-text>
-                      <v-textarea v-model="locationNoteForm.note" label="Note" variant="outlined" rows="3" />
-                    </v-card-text>
                     <v-card-actions>
-                      <v-btn color="primary" @click="addLocationNote">Add note</v-btn>
+                      <v-btn color="primary" variant="outlined" @click="openLocationNoteDialog">Add note</v-btn>
                     </v-card-actions>
                   </v-card>
                 </template>
                 <template v-else-if="page === 'view' && tableName === 'sessionnotes'">
-                  <v-card v-for="entry in records" :key="`session-note-${entry.id}`" variant="tonal" class="mb-4">
-                    <v-card-title>{{ formatValue(entry.createdAt) }}</v-card-title>
-                    <v-card-text style="white-space: pre-wrap;">{{ entry.notes || 'No notes.' }}</v-card-text>
-                    <v-card-actions v-if="canWrite">
-                      <v-btn variant="outlined" @click="editRecordFromView(entry)">Edit session note</v-btn>
-                    </v-card-actions>
-                  </v-card>
+                  <v-list v-if="records.length" lines="two">
+                    <v-list-item v-for="entry in records" :key="`session-note-${entry.id}`">
+                      <template #title>{{ formatValue(entry.createdAt) }}</template>
+                      <template #subtitle>{{ entry.notes || 'No notes.' }}</template>
+                      <template #append>
+                        <v-btn v-if="canWrite" size="small" variant="outlined" @click="editRecordFromView(entry)">Edit</v-btn>
+                      </template>
+                    </v-list-item>
+                  </v-list>
                   <v-alert v-if="!records.length" type="info" variant="tonal">No records found.</v-alert>
                 </template>
+
                 <v-list v-else-if="tableName !== 'sessionnotes' && filteredRecords.length" lines="two">
                   <v-list-item v-for="record in filteredRecords" :key="record.id">
                     <template #title>
@@ -1512,18 +1533,62 @@ onMounted(() => {
                   </v-list-item>
                 </v-list>
                 <v-alert v-else-if="tableName !== 'sessionnotes'" type="info" variant="tonal">No records found.</v-alert>
+
+                <v-dialog v-model="showCharacterNoteDialog" max-width="640">
+                  <v-card>
+                    <v-card-title>Add character note</v-card-title>
+                    <v-card-text>
+                      <v-textarea v-model="characterNoteForm.note" label="Note" variant="outlined" rows="4" autofocus />
+                    </v-card-text>
+                    <v-card-actions>
+                      <v-spacer />
+                      <v-btn variant="text" @click="showCharacterNoteDialog = false">Cancel</v-btn>
+                      <v-btn color="primary" @click="addCharacterNote">Save note</v-btn>
+                    </v-card-actions>
+                  </v-card>
+                </v-dialog>
+
+                <v-dialog v-model="showLocationNoteDialog" max-width="640">
+                  <v-card>
+                    <v-card-title>Add location note</v-card-title>
+                    <v-card-text>
+                      <v-textarea v-model="locationNoteForm.note" label="Note" variant="outlined" rows="4" autofocus />
+                    </v-card-text>
+                    <v-card-actions>
+                      <v-spacer />
+                      <v-btn variant="text" @click="showLocationNoteDialog = false">Cancel</v-btn>
+                      <v-btn color="primary" @click="addLocationNote">Save note</v-btn>
+                    </v-card-actions>
+                  </v-card>
+                </v-dialog>
+
+                <v-dialog v-model="showReputationDialog" max-width="640">
+                  <v-card>
+                    <v-card-title>Add reputation entry</v-card-title>
+                    <v-card-text>
+                      <v-select v-model="reputationForm.targetId" :items="characterSelectItems" label="Target character" variant="outlined" class="mb-3" />
+                      <v-text-field v-model="reputationForm.adjustment" label="Adjustment" type="number" variant="outlined" class="mb-3" />
+                      <v-textarea v-model="reputationForm.note" label="Note" rows="4" variant="outlined" />
+                    </v-card-text>
+                    <v-card-actions>
+                      <v-spacer />
+                      <v-btn variant="text" @click="showReputationDialog = false">Cancel</v-btn>
+                      <v-btn color="primary" @click="addCharacterReputation">Save reputation</v-btn>
+                    </v-card-actions>
+                  </v-card>
+                </v-dialog>
               </template>
             </v-card-text>
           </v-card>
 
           <v-btn
-            v-if="page === 'edit' && canWrite && canEditCurrentTable"
+            v-if="(page === 'edit' || page === 'view') && canWrite && canEditCurrentTable"
             icon="mdi-plus"
             color="primary"
             size="large"
             elevation="8"
             class="edit-fab"
-            @click="startAddRecord"
+            @click="openCreateForCurrentView"
           />
         </v-container>
 
