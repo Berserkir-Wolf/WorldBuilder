@@ -32,18 +32,30 @@ The Compose configuration is stored in `docker-compose.yml` at the repository ro
 ```yaml
 services:
   web:
+    image: berserkirwolf/worldbuilder:latest
     build:
-      context: ./app/web-app
+      context: .
+      dockerfile: app/web-app/dockerfile
+      args:
+        APP_VERSION: ${APP_VERSION:-0.0.4}
+      tags:
+        - berserkirwolf/worldbuilder:latest
+        - berserkirwolf/worldbuilder:${APP_VERSION:-0.0.4}
     ports:
       - "8080:3000"
     environment:
-      DATABASE_URL: file:/app/data/worldbuilder.db
+      DATABASE_PROVIDER: ${DATABASE_PROVIDER:-sqlite}
+      DATABASE_URL: /app/data/worldbuilder.db
       BASE_URL: /
     volumes:
       - ./app/data:/app/data
 ```
 
 `BASE_URL` controls the path where the application is mounted. Use `/` for a direct local deployment, or set it to a path such as `/worldbuilder` when the application is behind a reverse proxy. An absolute URL is also accepted; its path component is used for routing.
+
+For SQLite in Docker, `DATABASE_URL` can be either a plain file path (for example `/app/data/worldbuilder.db`) or a Prisma-style `file:` URL (for example `file:/app/data/worldbuilder.db`).
+
+If `DATABASE_PROVIDER=sqlite` and `DATABASE_URL` is provided as a plain path, the container entrypoint normalizes it to a Prisma-compatible `file:` URL before running Prisma commands.
 
 ### Database providers
 
@@ -52,7 +64,7 @@ SQLite is the default database provider. To select it explicitly in Docker Compo
 ```yaml
 environment:
   DATABASE_PROVIDER: sqlite
-  DATABASE_URL: file:/app/data/worldbuilder.db
+  DATABASE_URL: /app/data/worldbuilder.db
 ```
 
 MySQL is also supported. Set `DATABASE_PROVIDER` to `mysql` and provide either `DATABASE_URL` directly or the individual MySQL connection variables:
@@ -82,7 +94,7 @@ environment:
   ADMIN_PASSWORD: change-me
 ```
 
-The administrator password is hashed before it is stored. Existing plaintext passwords are upgraded to scrypt hashes after a successful login. All database API routes require a signed session cookie; only `/api/auth/login`, `/api/auth/me`, and `/api/auth/logout` are unauthenticated endpoints.
+The administrator password is hashed before it is stored. Existing plaintext passwords are upgraded to scrypt hashes after a successful login. All database API routes require a signed session cookie; only `/api/auth/login`, `/api/auth/me`, and `/api/auth/logout` are unauthenticated endpoints. Authenticated users can change their password from the user menu in the top bar; password changes require the current password and a new password.
 
 ### Database migrations
 

@@ -416,11 +416,23 @@ authRouter.post('/reset-password', async (req, res) => {
     if (!req.session?.userId) {
         return res.status(401).json({ error: 'Authentication required.' });
     }
+    const currentPassword = String(req.body.currentPassword || '');
     const password = String(req.body.password || '');
+    if (!currentPassword) {
+        return res.status(400).json({ error: 'Current password is required.' });
+    }
     if (password.length < 8) {
         return res.status(400).json({ error: 'Password must be at least 8 characters.' });
     }
     const user = await prisma.user.findUnique({ where: { id: req.session.userId } });
+    if (!user) {
+        req.session.destroy(() => {});
+        return res.status(401).json({ error: 'Authentication required.' });
+    }
+    const verification = await verifyPassword(currentPassword, user.password);
+    if (!verification.valid) {
+        return res.status(400).json({ error: 'Current password is incorrect.' });
+    }
     await prisma.user.update({
         where: { id: req.session.userId },
         data: { password: await hashPassword(password), mustResetPassword: false }

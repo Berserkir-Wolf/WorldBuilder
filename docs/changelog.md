@@ -8,21 +8,30 @@ The application version is maintained in [`app/web-app/package.json`](https://gi
 
 Changes that have not yet been included in a versioned release.
 
+## [0.0.4] - 2026-11-01
+
+Navigation, routing, Docker, SQLite URL handling, and Material UI updates.
+
 ### Added
 
 - Added HTTP error-status activity logging for web requests (including 404 responses).
+- Added Vuetify-based Material UI styling and components across login, reset-password, view/edit, and admin screens.
+- Added a user menu in the header with actions to change password and sign out.
 
 ### Changed
 
 - Updated Docker Compose defaults to use `berserkirwolf/worldbuilder:latest` without requiring `APP_VERSION` arguments.
 - Updated the Docker image build workflow to also tag successful version builds as `latest`.
 - Updated main navigation so the hamburger trigger is at top-left and opens as a left sidebar overlay.
+- Updated dark-mode theming to follow system preference by default and apply through Vuetify theme state.
+- Updated authenticated password change flow to require current password verification.
 
 ### Fixed
 
 - Fixed base URL seeding so `applicationsettings.baseurl` defaults to `/` only when missing and no longer overwrites existing values.
 - Fixed SPA startup routing so loading the raw configured base URL serves the application entry page reliably.
 - Fixed a frontend initialization-order issue that could leave the UI blank on load.
+- Fixed SQLite Docker defaults/docs to support plain file paths by normalizing to Prisma `file:` URLs at container startup.
 
 ## [0.0.3]
 

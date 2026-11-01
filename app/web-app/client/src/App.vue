@@ -77,13 +77,14 @@ const authenticated = ref(false);
 const authUser = ref(null);
 const loginForm = ref({ identifier: '', password: '' });
 const loginError = ref(null);
-const resetForm = ref({ password: '', confirmation: '' });
+const resetForm = ref({ currentPassword: '', password: '', confirmation: '' });
 const resetError = ref(null);
 const resetLoading = ref(false);
 const appName = ref('WorldBuilder');
 const basePath = ref('');
 const page = ref(getPageForPath(window.location.pathname));
 const menuOpen = ref(false);
+const userMenuOpen = ref(false);
 const returnPath = ref('/');
 const adminUsers = ref([]);
 const selectedAdminUserId = ref(null);
@@ -302,6 +303,10 @@ function pathWithBase(path) {
 
 async function resetPassword() {
   resetError.value = null;
+  if (!resetForm.value.currentPassword) {
+    resetError.value = 'Current password is required.';
+    return;
+  }
   if (resetForm.value.password !== resetForm.value.confirmation) {
     resetError.value = 'Passwords do not match.';
     return;
@@ -312,12 +317,12 @@ async function resetPassword() {
       method: 'POST',
       credentials: 'same-origin',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ password: resetForm.value.password })
+      body: JSON.stringify({ currentPassword: resetForm.value.currentPassword, password: resetForm.value.password })
     });
     const result = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(result.error || 'Unable to reset password.');
     authUser.value = { ...authUser.value, mustResetPassword: false };
-    resetForm.value = { password: '', confirmation: '' };
+    resetForm.value = { currentPassword: '', password: '', confirmation: '' };
     await navigate('/', { replace: true });
   } catch (error) {
     resetError.value = error.message;
@@ -482,12 +487,20 @@ async function login() {
 }
 
 async function logout() {
+  userMenuOpen.value = false;
   await fetch(apiUrl('auth/logout'), { method: 'POST', credentials: 'same-origin' });
   authenticated.value = false;
   authUser.value = null;
   records.value = [];
   returnPath.value = '/';
   setRoute('/login');
+}
+
+async function openChangePassword() {
+  userMenuOpen.value = false;
+  resetError.value = null;
+  resetForm.value = { currentPassword: '', password: '', confirmation: '' };
+  await navigate('/reset-password');
 }
 
 watch(tableName, () => {
@@ -559,203 +572,311 @@ onMounted(() => {
 </script>
 
 <template>
-  <div v-if="authLoading" class="auth-message">Checking session...</div>
+  <v-app>
+    <v-main>
+      <v-container v-if="authLoading" class="py-10 text-center">Checking session...</v-container>
 
-  <form v-else-if="!authenticated" class="login-card card" @submit.prevent="login">
-    <h1>Sign in to {{ appName }}</h1>
-    <p v-if="loginError" class="error-message">{{ loginError }}</p>
-    <label class="field">
-      <span>Email or username</span>
-      <input v-model="loginForm.identifier" required autocomplete="username" />
-    </label>
-    <label class="field">
-      <span>Password</span>
-      <input v-model="loginForm.password" required type="password" autocomplete="current-password" />
-    </label>
-    <button class="primary" type="submit">Sign in</button>
-  </form>
+      <v-container v-else-if="!authenticated" class="py-10">
+        <v-card class="auth-card mx-auto" elevation="2">
+          <v-card-title>Sign in to {{ appName }}</v-card-title>
+          <v-card-text>
+            <v-alert v-if="loginError" type="error" variant="tonal" class="mb-4">{{ loginError }}</v-alert>
+            <v-form @submit.prevent="login">
+              <v-text-field v-model="loginForm.identifier" label="Email or username" required autocomplete="username" variant="outlined" class="mb-3" />
+              <v-text-field v-model="loginForm.password" label="Password" required type="password" autocomplete="current-password" variant="outlined" class="mb-4" />
+              <v-btn color="primary" type="submit">Sign in</v-btn>
+            </v-form>
+          </v-card-text>
+        </v-card>
+      </v-container>
 
-  <form v-else-if="page === 'reset-password'" class="login-card card" @submit.prevent="resetPassword">
-    <h1>Reset your password</h1>
-    <p class="muted">A password reset is required before you can continue.</p>
-    <p v-if="resetError" class="error-message">{{ resetError }}</p>
-    <label class="field">
-      <span>New password</span>
-      <input v-model="resetForm.password" required minlength="8" type="password" autocomplete="new-password" />
-    </label>
-    <label class="field">
-      <span>Confirm new password</span>
-      <input v-model="resetForm.confirmation" required minlength="8" type="password" autocomplete="new-password" />
-    </label>
-    <button class="primary" type="submit" :disabled="resetLoading">{{ resetLoading ? 'Saving...' : 'Reset password' }}</button>
-  </form>
+      <v-container v-else-if="page === 'reset-password'" class="py-10">
+        <v-card class="auth-card mx-auto" elevation="2">
+          <v-card-title>Reset your password</v-card-title>
+          <v-card-text>
+            <p class="text-medium-emphasis mb-4">
+              {{ authUser?.mustResetPassword ? 'A password reset is required before you can continue.' : 'Update your password.' }}
+            </p>
+            <v-alert v-if="resetError" type="error" variant="tonal" class="mb-4">{{ resetError }}</v-alert>
+            <v-form @submit.prevent="resetPassword">
+              <v-text-field
+                v-model="resetForm.currentPassword"
+                label="Current password"
+                required
+                type="password"
+                autocomplete="current-password"
+                variant="outlined"
+                class="mb-3"
+              />
+              <v-text-field v-model="resetForm.password" label="New password" required minlength="8" type="password" autocomplete="new-password" variant="outlined" class="mb-3" />
+              <v-text-field v-model="resetForm.confirmation" label="Confirm new password" required minlength="8" type="password" autocomplete="new-password" variant="outlined" class="mb-4" />
+              <v-btn color="primary" type="submit" :loading="resetLoading">{{ resetLoading ? 'Saving...' : 'Reset password' }}</v-btn>
+            </v-form>
+          </v-card-text>
+        </v-card>
+      </v-container>
 
-  <template v-else>
-  <header class="app-bar">
-    <button class="theme-button" type="button" aria-label="Open navigation" @click="menuOpen = !menuOpen">☰</button>
-    <a class="app-name" href="/" @click.prevent="navigate('/')">{{ appName }}</a>
-    <span class="header-actions">
-      <span class="user-name">{{ authUser?.name || authUser?.email }}</span>
-      <button class="theme-button" type="button" :title="`Switch to ${mode === 'light' ? 'dark' : 'light'} mode`" @click="$emit('toggle-mode')">
-        {{ mode === 'light' ? '☾' : '☀' }}
-      </button>
-      <button class="theme-button" type="button" @click="logout">Sign out</button>
-    </span>
-  </header>
+      <template v-else>
+        <v-app-bar color="primary">
+          <template #prepend>
+            <v-btn icon="mdi-menu" variant="text" color="white" aria-label="Open navigation" @click="menuOpen = !menuOpen" />
+          </template>
+          <v-btn variant="text" color="white" class="text-none font-weight-bold" @click="navigate('/')">{{ appName }}</v-btn>
+          <v-spacer />
+          <div class="d-flex align-center ga-2">
+            <v-menu v-model="userMenuOpen" location="bottom end" offset="8">
+              <template #activator="{ props }">
+                <v-btn v-bind="props" variant="text" color="white" class="text-none">
+                  {{ authUser?.name || authUser?.email }}
+                  <v-icon end icon="mdi-chevron-down" />
+                </v-btn>
+              </template>
+              <v-list density="comfortable">
+                <v-list-item title="Change password" prepend-icon="mdi-key" @click="openChangePassword" />
+                <v-list-item title="Sign out" prepend-icon="mdi-logout" @click="logout" />
+              </v-list>
+            </v-menu>
+            <v-btn
+              :icon="mode === 'light' ? 'mdi-weather-night' : 'mdi-weather-sunny'"
+              variant="text"
+              color="white"
+              :title="`Switch to ${mode === 'light' ? 'dark' : 'light'} mode`"
+              @click="$emit('toggle-mode')"
+            />
+          </div>
+        </v-app-bar>
 
-  <div v-if="menuOpen" class="menu-overlay" @click.self="menuOpen = false">
-    <nav class="hamburger-menu card">
-      <button type="button" @click="navigateFromMenu('/')">Home</button>
-      <button v-if="canWrite" type="button" @click="navigateFromMenu('/edit')">Edit</button>
-      <button v-if="authUser?.isAdministrator" type="button" @click="navigateFromMenu('/admin')">Admin</button>
-    </nav>
-  </div>
+        <v-navigation-drawer v-model="menuOpen" temporary location="left">
+          <v-list nav density="comfortable">
+            <v-list-item title="Home" prepend-icon="mdi-home" @click="navigateFromMenu('/')" />
+            <v-list-item v-if="canWrite" title="Edit" prepend-icon="mdi-pencil" @click="navigateFromMenu('/edit')" />
+            <v-list-item v-if="authUser?.isAdministrator" title="Admin" prepend-icon="mdi-shield-account" @click="navigateFromMenu('/admin')" />
+          </v-list>
+        </v-navigation-drawer>
 
-  <main v-if="page === 'view' || page === 'edit'" class="container">
-    <label class="field table-field">
-      <span>Table</span>
-      <select v-model="tableName">
-        <option v-for="[name, table] in databaseTables" :key="name" :value="name">{{ table.label }}</option>
-      </select>
-    </label>
+        <v-container v-if="page === 'view' || page === 'edit'" class="py-6">
+          <v-row>
+            <v-col cols="12" md="6">
+              <v-select
+                v-model="tableName"
+                label="Table"
+                variant="outlined"
+                :items="databaseTables.map(([name, table]) => ({ title: table.label, value: name }))"
+              />
+            </v-col>
+          </v-row>
 
-    <section>
-      <h1>{{ page === 'edit' ? 'Database editor' : 'Database viewer' }}</h1>
-      <p class="muted">{{ page === 'edit' ? 'Edit records across the WorldBuilder database.' : 'View records across the WorldBuilder database.' }}</p>
-    </section>
+          <v-card class="mb-4">
+            <v-card-title>{{ page === 'edit' ? 'Database editor' : 'Database viewer' }}</v-card-title>
+            <v-card-text class="text-medium-emphasis">
+              {{ page === 'edit' ? 'Edit records across the WorldBuilder database.' : 'View records across the WorldBuilder database.' }}
+            </v-card-text>
+          </v-card>
 
-    <form v-if="page === 'edit' && canWrite" class="card" @submit.prevent="saveRecord">
-      <h2>{{ editingId === null ? 'Add' : 'Edit' }} {{ definition.label }}</h2>
-      <div class="form-grid">
-        <label v-for="field in definition.fields" :key="field.name" class="field" :class="{ wide: field.multiline }">
-          <span>{{ field.label }}</span>
-          <textarea v-if="field.multiline" v-model="form[field.name]" :required="field.required" rows="3" />
-          <input v-else v-model="form[field.name]" :required="field.required" :type="field.type || 'text'" />
-        </label>
-      </div>
-      <div class="actions">
-        <button class="primary" type="submit">{{ editingId === null ? 'Create' : 'Save' }}</button>
-        <button v-if="editingId !== null" type="button" @click="cancelEdit">Cancel</button>
-      </div>
-    </form>
+          <v-card v-if="page === 'edit' && canWrite" class="mb-4">
+            <v-card-title>{{ editingId === null ? 'Add' : 'Edit' }} {{ definition.label }}</v-card-title>
+            <v-card-text>
+              <v-form @submit.prevent="saveRecord">
+                <v-row>
+                  <v-col v-for="field in definition.fields" :key="field.name" cols="12" :md="field.multiline ? 12 : 4">
+                    <v-textarea
+                      v-if="field.multiline"
+                      v-model="form[field.name]"
+                      :label="field.label"
+                      :required="field.required"
+                      rows="3"
+                      variant="outlined"
+                    />
+                    <v-text-field
+                      v-else
+                      v-model="form[field.name]"
+                      :label="field.label"
+                      :required="field.required"
+                      :type="field.type || 'text'"
+                      variant="outlined"
+                    />
+                  </v-col>
+                </v-row>
+                <div class="d-flex ga-3">
+                  <v-btn color="primary" type="submit">{{ editingId === null ? 'Create' : 'Save' }}</v-btn>
+                  <v-btn v-if="editingId !== null" variant="tonal" @click="cancelEdit">Cancel</v-btn>
+                </div>
+              </v-form>
+            </v-card-text>
+          </v-card>
 
-    <section class="card">
-      <h2>{{ definition.label }}</h2>
-      <p v-if="loading" class="muted">Loading...</p>
-      <div v-for="record in records" v-else :key="record.id" class="record">
-        <span>{{ definition.fields.map((field) => `${field.label}: ${formatValue(record[field.name])}`).join(' · ') }}</span>
-        <span class="record-actions">
-           <button v-if="canWrite" type="button" title="Edit" @click="page === 'view' ? editRecordFromView(record) : editRecord(record)">Edit</button>
-           <button v-if="page === 'edit' && canWrite" class="danger" type="button" title="Delete" @click="deleteRecord(record.id)">Delete</button>
-        </span>
-      </div>
-      <p v-if="!loading && records.length === 0" class="muted">No records found.</p>
-    </section>
-  </main>
+          <v-card>
+            <v-card-title>{{ definition.label }}</v-card-title>
+            <v-card-text>
+              <v-progress-linear v-if="loading" indeterminate class="mb-4" />
+              <template v-else>
+                <v-list v-if="records.length" lines="two">
+                  <v-list-item v-for="record in records" :key="record.id">
+                    <template #title>
+                      {{ definition.fields.map((field) => `${field.label}: ${formatValue(record[field.name])}`).join(' · ') }}
+                    </template>
+                    <template #append>
+                      <div class="d-flex ga-2">
+                        <v-btn
+                          v-if="canWrite"
+                          size="small"
+                          variant="outlined"
+                          @click="page === 'view' ? editRecordFromView(record) : editRecord(record)"
+                        >
+                          Edit
+                        </v-btn>
+                        <v-btn
+                          v-if="page === 'edit' && canWrite"
+                          size="small"
+                          color="error"
+                          variant="text"
+                          @click="deleteRecord(record.id)"
+                        >
+                          Delete
+                        </v-btn>
+                      </div>
+                    </template>
+                  </v-list-item>
+                </v-list>
+                <v-alert v-else type="info" variant="tonal">No records found.</v-alert>
+              </template>
+            </v-card-text>
+          </v-card>
+        </v-container>
 
-  <main v-else class="container">
-    <section class="card">
-      <h1>Administrator</h1>
-      <h2>Application name</h2>
-      <div class="actions">
-        <input v-model="appNameForm" aria-label="Application name" />
-        <button class="primary" type="button" @click="saveAppName">Save name</button>
-      </div>
-      <h2>Base URL</h2>
-      <p class="muted">Use a base URL path prefix for reverse proxy hosting. Environment variable values are locked.</p>
-      <div class="actions">
-        <input v-model="baseUrlForm" aria-label="Base URL" :disabled="baseUrlLocked" />
-        <button class="primary" type="button" :disabled="baseUrlLocked" @click="saveBaseUrl">Save base URL</button>
-      </div>
-      <p class="muted">Source: {{ baseUrlSource }}{{ baseUrlLocked ? ' (locked)' : '' }}</p>
-      <h2>Versions</h2>
-      <p class="muted">Versions are managed programmatically and cannot be edited from the admin interface.</p>
-      <div class="form-grid">
-        <label class="field">
-          <span>Application version</span>
-          <input :value="versions.appVersion || 'n/a'" disabled readonly />
-        </label>
-        <label class="field">
-          <span>Database version</span>
-          <input :value="versions.dbVersion || 'n/a'" disabled readonly />
-        </label>
-      </div>
-    </section>
+        <v-container v-else class="py-6">
+          <v-card class="mb-4">
+            <v-card-title>Administrator</v-card-title>
+            <v-card-text>
+              <div class="text-h6 mb-2">Application name</div>
+              <div class="d-flex flex-wrap ga-3 mb-4">
+                <v-text-field v-model="appNameForm" aria-label="Application name" label="Application name" variant="outlined" hide-details />
+                <v-btn color="primary" @click="saveAppName">Save name</v-btn>
+              </div>
 
-    <section class="card">
-      <h2>Users</h2>
-      <form class="form-grid" @submit.prevent="createUser">
-        <input v-model="newUser.name" required placeholder="Name" />
-        <input v-model="newUser.email" required type="email" placeholder="Email" />
-        <input v-model="newUser.username" placeholder="Username" />
-        <input v-model="newUser.password" required type="password" placeholder="Password" />
-        <label><input v-model="newUser.canWrite" type="checkbox" /> Write access</label>
-        <label><input v-model="newUser.isAdministrator" type="checkbox" /> Administrator</label>
-        <label><input v-model="newUser.mustResetPassword" type="checkbox" /> Require password reset</label>
-        <button class="primary" type="submit">Create user</button>
-      </form>
+              <div class="text-h6 mb-2">Base URL</div>
+              <p class="text-medium-emphasis mb-3">Use a base URL path prefix for reverse proxy hosting. Environment variable values are locked.</p>
+              <div class="d-flex flex-wrap ga-3 mb-2">
+                <v-text-field v-model="baseUrlForm" aria-label="Base URL" label="Base URL" variant="outlined" :disabled="baseUrlLocked" hide-details />
+                <v-btn color="primary" :disabled="baseUrlLocked" @click="saveBaseUrl">Save base URL</v-btn>
+              </div>
+              <p class="text-medium-emphasis mb-4">Source: {{ baseUrlSource }}{{ baseUrlLocked ? ' (locked)' : '' }}</p>
 
-      <form class="card" @submit.prevent="saveSelectedAdminUser">
-        <h3>Edit existing user</h3>
-        <label class="field">
-          <span>User</span>
-          <select :value="selectedAdminUserId ?? ''" @change="selectAdminUser">
-            <option value="">Select a user...</option>
-            <option v-for="user in adminUsers" :key="`user-select-${user.id}`" :value="user.id">
-              {{ user.email }}
-            </option>
-          </select>
-        </label>
-        <div v-if="selectedAdminUserId !== null" class="form-grid">
-          <input v-model="selectedAdminUserForm.name" required placeholder="Name" />
-          <input v-model="selectedAdminUserForm.email" required type="email" placeholder="Email" />
-          <input v-model="selectedAdminUserForm.username" placeholder="Username" />
-          <input v-model="selectedAdminUserForm.password" type="password" placeholder="New password (optional)" />
-          <label><input v-model="selectedAdminUserForm.canWrite" type="checkbox" /> Write access</label>
-          <label><input v-model="selectedAdminUserForm.isAdministrator" type="checkbox" /> Administrator</label>
-          <label><input v-model="selectedAdminUserForm.mustResetPassword" type="checkbox" /> Require reset</label>
-        </div>
-        <div v-if="selectedAdminUserId !== null" class="actions">
-          <button class="primary" type="submit">Save user</button>
-        </div>
-      </form>
+              <div class="text-h6 mb-2">Versions</div>
+              <p class="text-medium-emphasis mb-3">Versions are managed programmatically and cannot be edited from the admin interface.</p>
+              <v-row>
+                <v-col cols="12" md="6">
+                  <v-text-field label="Application version" :model-value="versions.appVersion || 'n/a'" disabled readonly variant="outlined" />
+                </v-col>
+                <v-col cols="12" md="6">
+                  <v-text-field label="Database version" :model-value="versions.dbVersion || 'n/a'" disabled readonly variant="outlined" />
+                </v-col>
+              </v-row>
+            </v-card-text>
+          </v-card>
 
-      <div v-for="user in adminUsers" :key="user.id" class="record">
-        <span>{{ user.email }}</span>
-        <label><input v-model="user.canWrite" type="checkbox" @change="updateUser(user)" /> Write</label>
-        <label><input v-model="user.isAdministrator" type="checkbox" @change="updateUser(user)" /> Admin</label>
-        <label><input v-model="user.mustResetPassword" type="checkbox" @change="updateUser(user)" /> Require reset</label>
-        <button class="danger" type="button" @click="deleteUser(user)">Delete</button>
-      </div>
-    </section>
-  </main>
+          <v-card>
+            <v-card-title>Users</v-card-title>
+            <v-card-text>
+              <v-form @submit.prevent="createUser">
+                <v-row>
+                  <v-col cols="12" md="4"><v-text-field v-model="newUser.name" required label="Name" variant="outlined" /></v-col>
+                  <v-col cols="12" md="4"><v-text-field v-model="newUser.email" required type="email" label="Email" variant="outlined" /></v-col>
+                  <v-col cols="12" md="4"><v-text-field v-model="newUser.username" label="Username" variant="outlined" /></v-col>
+                  <v-col cols="12" md="4"><v-text-field v-model="newUser.password" required type="password" label="Password" variant="outlined" /></v-col>
+                  <v-col cols="12" md="4"><v-checkbox v-model="newUser.canWrite" label="Write access" hide-details /></v-col>
+                  <v-col cols="12" md="4"><v-checkbox v-model="newUser.isAdministrator" label="Administrator" hide-details /></v-col>
+                  <v-col cols="12" md="4"><v-checkbox v-model="newUser.mustResetPassword" label="Require password reset" hide-details /></v-col>
+                  <v-col cols="12"><v-btn color="primary" type="submit">Create user</v-btn></v-col>
+                </v-row>
+              </v-form>
 
-  <div v-if="message" class="notification" :class="message.severity" role="alert">
-    {{ message.text }}
-    <button type="button" aria-label="Close" @click="message = null">×</button>
-  </div>
-  </template>
+              <v-divider class="my-4" />
+
+              <v-form @submit.prevent="saveSelectedAdminUser">
+                <v-card variant="tonal" class="mb-4">
+                  <v-card-title>Edit existing user</v-card-title>
+                  <v-card-text>
+                    <v-select
+                      :model-value="selectedAdminUserId"
+                      label="User"
+                      variant="outlined"
+                      :items="adminUsers.map((user) => ({ title: user.email, value: user.id }))"
+                      @update:model-value="(value) => selectAdminUser({ target: { value: value ?? '' } })"
+                    />
+                    <v-row v-if="selectedAdminUserId !== null">
+                      <v-col cols="12" md="4"><v-text-field v-model="selectedAdminUserForm.name" required label="Name" variant="outlined" /></v-col>
+                      <v-col cols="12" md="4"><v-text-field v-model="selectedAdminUserForm.email" required type="email" label="Email" variant="outlined" /></v-col>
+                      <v-col cols="12" md="4"><v-text-field v-model="selectedAdminUserForm.username" label="Username" variant="outlined" /></v-col>
+                      <v-col cols="12" md="4"><v-text-field v-model="selectedAdminUserForm.password" type="password" label="New password (optional)" variant="outlined" /></v-col>
+                      <v-col cols="12" md="4"><v-checkbox v-model="selectedAdminUserForm.canWrite" label="Write access" hide-details /></v-col>
+                      <v-col cols="12" md="4"><v-checkbox v-model="selectedAdminUserForm.isAdministrator" label="Administrator" hide-details /></v-col>
+                      <v-col cols="12" md="4"><v-checkbox v-model="selectedAdminUserForm.mustResetPassword" label="Require reset" hide-details /></v-col>
+                      <v-col cols="12"><v-btn color="primary" type="submit">Save user</v-btn></v-col>
+                    </v-row>
+                  </v-card-text>
+                </v-card>
+              </v-form>
+
+              <v-list lines="two">
+                <v-list-item v-for="user in adminUsers" :key="user.id">
+                  <template #title>{{ user.email }}</template>
+                  <template #subtitle>
+                    <div class="d-flex flex-wrap ga-4 mt-1">
+                      <v-checkbox
+                        v-model="user.canWrite"
+                        density="compact"
+                        hide-details
+                        label="Write"
+                        @update:model-value="updateUser(user)"
+                      />
+                      <v-checkbox
+                        v-model="user.isAdministrator"
+                        density="compact"
+                        hide-details
+                        label="Admin"
+                        @update:model-value="updateUser(user)"
+                      />
+                      <v-checkbox
+                        v-model="user.mustResetPassword"
+                        density="compact"
+                        hide-details
+                        label="Require reset"
+                        @update:model-value="updateUser(user)"
+                      />
+                    </div>
+                  </template>
+                  <template #append>
+                    <v-btn color="error" variant="text" @click="deleteUser(user)">Delete</v-btn>
+                  </template>
+                </v-list-item>
+              </v-list>
+            </v-card-text>
+          </v-card>
+        </v-container>
+      </template>
+
+      <v-snackbar
+        :model-value="Boolean(message)"
+        :color="message?.severity === 'error' ? 'error' : 'success'"
+        location="bottom end"
+        @update:model-value="(value) => { if (!value) message = null; }"
+      >
+        {{ message?.text }}
+        <template #actions>
+          <v-btn icon="mdi-close" variant="text" @click="message = null" />
+        </template>
+      </v-snackbar>
+    </v-main>
+  </v-app>
 </template>
 
 <style scoped>
-:global(*) { box-sizing: border-box; }
-:global(body) { margin: 0; font-family: Inter, system-ui, sans-serif; background: var(--background); color: var(--text); }
-:global(:root) { --background: #f5f7fb; --surface: #fff; --text: #172033; --muted: #657187; --border: #d7dce5; --primary: #1565c0; }
-:global(.dark) { --background: #121820; --surface: #1d2733; --text: #edf2f7; --muted: #aab6c5; --border: #3a4756; --primary: #90caf9; }
-.app-bar { display: flex; align-items: center; justify-content: space-between; padding: 1rem max(1.5rem, calc((100% - 1200px) / 2)); color: white; background: #1976d2; font-size: 1.25rem; }
-.app-name { color: inherit; text-decoration: none; font-weight: 700; }
-.header-actions { display: flex; align-items: center; gap: .75rem; } .user-name { font-size: .85rem; }
-.theme-button { border: 0; color: inherit; background: transparent; font-size: 1rem; cursor: pointer; }
-.menu-overlay { position: fixed; inset: 0; background: #0006; z-index: 50; }
-.hamburger-menu { position: fixed; left: 0; top: 0; bottom: 0; z-index: 51; display: flex; flex-direction: column; gap: .75rem; width: min(320px, 85vw); margin: 0; padding: 1.5rem; border-radius: 0; }
-.auth-message { padding: 2rem; text-align: center; } .login-card { display: grid; gap: 1rem; max-width: 420px; margin: 4rem auto; } .error-message { color: #d32f2f; }
-.container { display: grid; gap: 1.5rem; max-width: 1200px; margin: 0 auto; padding: 2rem 1.5rem; }
-h1, h2 { margin: 0 0 .5rem; } h1 { font-size: 2rem; } h2 { font-size: 1.25rem; }
-.muted { color: var(--muted); } .card { padding: 1.5rem; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); box-shadow: 0 1px 3px #00000012; }
-.form-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; } .field { display: flex; flex-direction: column; gap: .4rem; } .field.wide { grid-column: 1 / -1; }
-.field span { font-size: .9rem; color: var(--muted); } input, textarea, select { width: 100%; padding: .7rem; border: 1px solid var(--border); border-radius: 4px; color: var(--text); background: var(--surface); font: inherit; } .table-field { max-width: 100%; }
-.actions { display: flex; gap: .75rem; margin-top: 1.5rem; } button { padding: .6rem 1rem; border: 1px solid var(--border); border-radius: 4px; color: var(--text); background: var(--surface); cursor: pointer; } button.primary { border-color: var(--primary); color: white; background: var(--primary); } button.danger { color: #d32f2f; }
-.record { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: .75rem 0; border-bottom: 1px solid var(--border); } .record:last-of-type { border-bottom: 0; } .record-actions { display: flex; gap: .5rem; flex-shrink: 0; }
-.notification { position: fixed; right: 1.5rem; bottom: 1.5rem; display: flex; gap: 1rem; align-items: center; padding: 1rem; border-radius: 4px; color: white; box-shadow: 0 3px 8px #0004; } .notification.success { background: #2e7d32; } .notification.error { background: #d32f2f; } .notification button { padding: 0; border: 0; color: white; background: transparent; font-size: 1.25rem; }
-@media (max-width: 700px) { .form-grid { grid-template-columns: 1fr; } .field.wide { grid-column: auto; } .record { align-items: flex-start; flex-direction: column; } }
+.auth-card {
+  max-width: 420px;
+}
+
+.user-name {
+  opacity: .9;
+}
 </style>
