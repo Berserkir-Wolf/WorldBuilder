@@ -8,15 +8,15 @@ services:
         - linux/amd64
       provenance: false
       args:
-        APP_VERSION: ${APP_VERSION:-0.0.4}
+        APP_VERSION: ${APP_VERSION:-0.0.5}
       tags:
         - berserkirwolf/worldbuilder:latest
-        - berserkirwolf/worldbuilder:${APP_VERSION:-0.0.4}
+        - berserkirwolf/worldbuilder:${APP_VERSION:-0.0.5}
     ports:
       - "8080:3000"
     environment:
       DATABASE_PROVIDER: ${DATABASE_PROVIDER:-sqlite}
-      DATABASE_URL: ${DATABASE_URL:-file:/app/data/worldbuilder.db}
+      DATABASE_URL: ${DATABASE_URL:-/app/data/worldbuilder.db}
       BASE_URL: /
       UPLOAD_FOLDER: /app/data/uploads
       MYSQL_HOST: ${MYSQL_HOST:-mysql}

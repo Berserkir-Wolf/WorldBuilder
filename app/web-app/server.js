@@ -416,11 +416,23 @@ authRouter.post('/reset-password', async (req, res) => {
     if (!req.session?.userId) {
         return res.status(401).json({ error: 'Authentication required.' });
     }
+    const currentPassword = String(req.body.currentPassword || '');
     const password = String(req.body.password || '');
+    if (!currentPassword) {
+        return res.status(400).json({ error: 'Current password is required.' });
+    }
     if (password.length < 8) {
         return res.status(400).json({ error: 'Password must be at least 8 characters.' });
     }
     const user = await prisma.user.findUnique({ where: { id: req.session.userId } });
+    if (!user) {
+        req.session.destroy(() => {});
+        return res.status(401).json({ error: 'Authentication required.' });
+    }
+    const verification = await verifyPassword(currentPassword, user.password);
+    if (!verification.valid) {
+        return res.status(400).json({ error: 'Current password is incorrect.' });
+    }
     await prisma.user.update({
         where: { id: req.session.userId },
         data: { password: await hashPassword(password), mustResetPassword: false }
@@ -428,6 +440,8 @@ authRouter.post('/reset-password', async (req, res) => {
     logActivity(`user ${getUserLabel(user)} password changed from ${getRequestIp(req)}`);
     return res.status(204).send();
 });
+
+const characterTypes = ['Player Character', 'DM Character', 'NPC', 'Guild', 'Military', 'Business', 'Misc'];
 
 const resources = {
     users: {
@@ -460,7 +474,8 @@ const resources = {
             name: 'string',
             type: 'string',
             role: 'string',
-            location: 'number'
+            location: 'number',
+            affiliation: 'number'
         }
     },
     characterdetails: {
@@ -486,6 +501,26 @@ const resources = {
             targetId: 'number',
             adjustment: 'number',
             note: 'string'
+        }
+    },
+    characternotes: {
+        delegate: 'characterNote',
+        fields: {
+            characterId: 'number',
+            note: 'string'
+        }
+    },
+    locationnotes: {
+        delegate: 'locationNote',
+        fields: {
+            locationId: 'number',
+            note: 'string'
+        }
+    },
+    sessionnotes: {
+        delegate: 'sessionNote',
+        fields: {
+            notes: 'string'
         }
     }
 };
@@ -524,6 +559,12 @@ async function getPayload(resource, body) {
 
     if (resource.delegate === 'user' && Object.prototype.hasOwnProperty.call(payload, 'password') && payload.password) {
         payload.password = await hashPassword(payload.password);
+    }
+
+    if (resource.delegate === 'character' && Object.prototype.hasOwnProperty.call(payload, 'type') && payload.type !== null) {
+        if (!characterTypes.includes(payload.type)) {
+            throw new Error(`type must be one of: ${characterTypes.join(', ')}.`);
+        }
     }
 
     return payload;
@@ -621,9 +662,16 @@ function mountApplicationRoutes(currentBasePath) {
         })
     );
     app.get(appRootPath, (req, res) => res.sendFile(path.join(publicDirectory, 'index.html')));
+    app.get(`${currentBasePath}/character`, (req, res) => res.sendFile(path.join(publicDirectory, 'index.html')));
+    app.get(`${currentBasePath}/location`, (req, res) => res.sendFile(path.join(publicDirectory, 'index.html')));
+    app.get(`${currentBasePath}/sessions`, (req, res) => res.sendFile(path.join(publicDirectory, 'index.html')));
+    app.get(`${currentBasePath}/view`, (req, res) => res.sendFile(path.join(publicDirectory, 'index.html')));
+    app.get(`${currentBasePath}/view/:table`, (req, res) => res.sendFile(path.join(publicDirectory, 'index.html')));
     app.get(`${currentBasePath}/login`, (req, res) => res.sendFile(path.join(publicDirectory, 'index.html')));
     app.get(`${currentBasePath}/reset-password`, (req, res) => res.sendFile(path.join(publicDirectory, 'index.html')));
-    app.get(`${currentBasePath}/edit`, (req, res) => res.sendFile(path.join(publicDirectory, 'index.html')));
+    app.get(`${currentBasePath}/edit/characters`, (req, res) => res.sendFile(path.join(publicDirectory, 'index.html')));
+    app.get(`${currentBasePath}/edit/locations`, (req, res) => res.sendFile(path.join(publicDirectory, 'index.html')));
+    app.get(`${currentBasePath}/edit/sessions`, (req, res) => res.sendFile(path.join(publicDirectory, 'index.html')));
     app.get(`${currentBasePath}/admin`, (req, res) => res.sendFile(path.join(publicDirectory, 'index.html')));
     app.use(appRootPath, express.static(publicDirectory));
 }

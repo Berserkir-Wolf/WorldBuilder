@@ -34,6 +34,17 @@ if [ "$provider" = "sqlite" ] && [ -z "${DATABASE_URL:-}" ]; then
   export DATABASE_URL
 fi
 
+if [ "$provider" = "sqlite" ] && [ -n "${DATABASE_URL:-}" ]; then
+  case "$DATABASE_URL" in
+	file:*)
+	  ;;
+	*)
+	  DATABASE_URL="file:${DATABASE_URL}"
+	  export DATABASE_URL
+	  ;;
+  esac
+fi
+
 cp "$schema" prisma/schema.prisma
 npx prisma generate --schema prisma/schema.prisma
 
