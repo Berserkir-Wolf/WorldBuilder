@@ -21,7 +21,9 @@ Tools to add in the future:
 
 TODO:
 - [X] Add a docker-compose file for easy deployment
-- [X] Add the ability to run the application in a production environment via Docker
+- [ ] Add the ability to run the application in a production environment via Docker
+- [ ] Add a simplified docker compose example for production deployment
+	- [ ] Default options only, no advanced configuration
 - [ ] Add a file upload feature for images and other media attached to locations and characters
 - [ ] Add a "descriptions" field to locations and characters for long-form text
 - [ ] Add email support for password reset and session notes sharing
