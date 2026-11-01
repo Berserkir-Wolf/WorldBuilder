@@ -1,7 +1,7 @@
 const { PrismaClient } = require('@prisma/client');
 
 const prisma = new PrismaClient();
-const currentDatabaseVersion = '1.4.0';
+const currentDatabaseVersion = '1.5.0';
 
 const migrations = [
   {
@@ -103,6 +103,26 @@ const migrations = [
       const tables = await transaction.$queryRawUnsafe("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'sessionnotes'");
       if (!tables.length) {
         await transaction.$executeRawUnsafe('CREATE TABLE sessionnotes (id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, notes TEXT)');
+      }
+    }
+  },
+  {
+    version: '1.5.0',
+    up: async (transaction) => {
+      const provider = process.env.DATABASE_PROVIDER || 'sqlite';
+      if (provider === 'mysql') {
+        const columns = await transaction.$queryRawUnsafe("SELECT COLUMN_NAME FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'characterdetails'");
+        const columnNames = columns.map((column) => column.COLUMN_NAME);
+        if (!columnNames.includes('sponsor')) {
+          await transaction.$executeRawUnsafe('ALTER TABLE characterdetails ADD COLUMN sponsor INTEGER NULL');
+        }
+        return;
+      }
+
+      const columns = await transaction.$queryRawUnsafe('PRAGMA table_info(characterdetails)');
+      const columnNames = columns.map((column) => column.name);
+      if (!columnNames.includes('sponsor')) {
+        await transaction.$executeRawUnsafe('ALTER TABLE characterdetails ADD COLUMN sponsor INTEGER');
       }
     }
   }

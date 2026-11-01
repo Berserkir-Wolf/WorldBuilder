@@ -141,7 +141,8 @@ async function seedCharacterDetails() {
     race: null,
     characterClass: null,
     level: null,
-    alignment: null
+    alignment: null,
+    sponsor: null
   });
 }
 

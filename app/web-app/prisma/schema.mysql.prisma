@@ -74,6 +74,7 @@ model CharacterDetail {
   characterClass String? @map("class")
   level          Int?
   alignment      String?
+  sponsor        Int?
 
   @@map("characterdetails")
 }

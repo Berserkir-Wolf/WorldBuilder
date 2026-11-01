@@ -33,7 +33,7 @@ const tableDefinitions = {
     label: 'Characters',
     fields: [
       { name: 'name', label: 'Name' },
-      { name: 'type', label: 'Type', options: ['Player Character', 'DM Character', 'NPC', 'Guild', 'Military', 'Business', 'Misc'] },
+      { name: 'type', label: 'Type', options: ['Player Character', 'DM Character', 'NPC', 'Guild', 'Military', 'Business', 'Church/Religion', 'Deity', 'Demon', 'Sponsor', 'Misc'] },
       { name: 'role', label: 'Role' },
       { name: 'location', label: 'Location', type: 'number', optionsSource: 'locations' },
       { name: 'affiliation', label: 'Affiliation', type: 'number', optionsSource: 'characters' }
@@ -52,7 +52,8 @@ const tableDefinitions = {
       { name: 'race', label: 'Race' },
       { name: 'characterClass', label: 'Class' },
       { name: 'level', label: 'Level', type: 'number' },
-      { name: 'alignment', label: 'Alignment' }
+      { name: 'alignment', label: 'Alignment' },
+      { name: 'sponsor', label: 'Sponsor', type: 'number', optionsSource: 'characters' }
     ]
   },
   reputation: {
@@ -1363,11 +1364,20 @@ onMounted(() => {
                         variant="outlined"
                       />
                       <v-text-field
-                        v-else
+                        v-else-if="!usesSelectField(field)"
                         v-model="characterDetailsForm[field.name]"
                         :label="field.label"
                         :required="field.required"
                         :type="field.type || 'text'"
+                        variant="outlined"
+                      />
+                      <v-select
+                        v-else
+                        v-model="characterDetailsForm[field.name]"
+                        :label="field.label"
+                        :required="field.required"
+                        :items="getFieldOptions(field)"
+                        clearable
                         variant="outlined"
                       />
                     </v-col>

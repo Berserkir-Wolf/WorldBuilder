@@ -40,7 +40,8 @@ const fieldSchemas = {
         race: { type: 'string', nullable: true },
         characterClass: { type: 'string', nullable: true },
         level: { type: 'integer', nullable: true },
-        alignment: { type: 'string', nullable: true }
+        alignment: { type: 'string', nullable: true },
+        sponsor: { type: 'integer', nullable: true }
     },
     reputation: {
         characterId: { type: 'integer', nullable: true },

@@ -441,7 +441,7 @@ authRouter.post('/reset-password', async (req, res) => {
     return res.status(204).send();
 });
 
-const characterTypes = ['Player Character', 'DM Character', 'NPC', 'Guild', 'Military', 'Business', 'Misc'];
+const characterTypes = ['Player Character', 'DM Character', 'NPC', 'Guild', 'Military', 'Business', 'Church/Religion', 'Deity', 'Demon', 'Sponsor', 'Misc'];
 
 const resources = {
     users: {
@@ -491,7 +491,8 @@ const resources = {
             race: 'string',
             characterClass: 'string',
             level: 'number',
-            alignment: 'string'
+            alignment: 'string',
+            sponsor: 'number'
         }
     },
     reputation: {
