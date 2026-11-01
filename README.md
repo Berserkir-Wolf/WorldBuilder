@@ -27,14 +27,24 @@ TODO:
 - [ ] Add a file upload feature for images and other media attached to locations and characters
 - [ ] Add a "descriptions" field to locations and characters for long-form text
 - [ ] Add email support for password reset and session notes sharing
-- [X Add a "reputation" system for characters to track relationships and alliances
-- [ ] Add auto-calculated modifier fields for reputation and other stats
+	- [ ] Include email server configuration in the settings feature
+	- [ ] Implement email templates for password reset and session notes sharing
+	- [ ] Include email verification for new users?
+	- [ ] Implement email notifications for campaign events and updates
+	- [ ] Include option for users to opt-in or opt-out of email notifications
+	- [ ] Include option for users to customize their email notification preferences
+	- [ ] Include OAuth2 support for mail sender authentication (e.g., Gmail, Outlook, etc.)
+	- [ ] Include option for users to customize their email sender name and email address
+- [X] Add a "reputation" system for characters to track relationships and alliances
+	- [ ] Add auto-calculated modifier fields for reputation
 - [X] Add a "session notes" feature for tracking campaign sessions and events
 - [ ] Add a "campaigns" feature for tracking multiple campaigns and their associated characters, locations, and session notes
 - [ ] Add a "worlds" feature for tracking multiple worlds and their associated campaigns, characters, locations, and session notes
 - [ ] Add a "maps" feature for tracking maps and their associated locations, characters, and session notes (linked to file upload feature).
 - [ ] Add a "quests" feature for tracking quests and their associated characters, locations, items, and session notes (linked to file upload feature).
 - [ ] Add an "items" feature for tracking items and their associated characters, locations, quests, and session notes.
+- [ ] Add auto-calculated fields for character stats, including health, mana, stamina, and other relevant attributes.
+	- [ ] Include modifiers for character rolls based on their stats.
 - [ ] Add ability to export and import campaign data in JSON format for backup and sharing purposes. Potentially also include application settings for database connection, email server, and other backend settings.
 - [ ] Add a "settings" feature for tracking application settings and preferences, including user preferences for dark mode, language, and other UI settings. 
 - [ ] Add a "users" feature for tracking users and their associated characters, locations, quests, items, and session notes. This will also include user permissions and roles for access control, as well as attaching what campaign they have access to.
