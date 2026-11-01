@@ -9,6 +9,7 @@
 - When UI changes are made, always rebuild and restart the running container for validation.
 - Top-level pages should have a consistent layout with a top navigation bar and a left sidebar for navigation. The sidebar should be collapsible and overlay the main content when open.
 - Place the hamburger menu at the top-left position.
+- Use a darker header color in dark mode for better contrast and readability of white text.
 
 ## Version Control Guidelines
 - Only create Git commits when explicitly and manually instructed by the user; do not auto-commit after making changes.
