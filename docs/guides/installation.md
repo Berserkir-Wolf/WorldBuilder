@@ -36,22 +36,62 @@ services:
     build:
       context: .
       dockerfile: app/web-app/dockerfile
-      args:
-        APP_VERSION: ${APP_VERSION:-0.0.6}
-      tags:
-        - berserkirwolf/worldbuilder:latest
-        - berserkirwolf/worldbuilder:${APP_VERSION:-0.0.6}
     ports:
       - "8080:3000"
     environment:
-      DATABASE_PROVIDER: ${DATABASE_PROVIDER:-sqlite}
       DATABASE_URL: /app/data/worldbuilder.db
-      BASE_URL: /
+      SESSION_SECRET: replace-with-a-long-random-secret
+      ADMIN_EMAIL: admin@example.com
+      ADMIN_PASSWORD: change-me
     volumes:
       - ./app/data:/app/data
 ```
 
-`BASE_URL` controls the path where the application is mounted. Use `/` for a direct local deployment, or set it to a path such as `/worldbuilder` when the application is behind a reverse proxy. An absolute URL is also accepted; its path component is used for routing.
+The example above shows only the minimum settings needed to run the container with SQLite.
+
+### Docker environment variables
+
+Supported environment variables for the `web` service:
+
+#### Core runtime
+
+- `DATABASE_PROVIDER`
+  - Default: `sqlite`
+  - Supported values: `sqlite`, `mysql`
+  - Controls which Prisma schema/provider is used.
+- `DATABASE_URL`
+  - Required for normal setups.
+  - SQLite example: `/app/data/worldbuilder.db` or `file:/app/data/worldbuilder.db`
+  - MySQL example: `mysql://user:password@host:3306/worldbuilder`
+- `BASE_URL`
+  - Default: `/`
+  - Use `/` for direct hosting, or a path like `/worldbuilder` behind a reverse proxy.
+  - Absolute URLs are accepted; only the path part is used for routing.
+- `UPLOAD_FOLDER`
+  - Default: `/app/data/uploads`
+  - File-system path used for uploads.
+
+#### Authentication and bootstrap
+
+- `SESSION_SECRET`
+  - Required in production.
+  - Long random secret used to sign session cookies.
+- `ADMIN_EMAIL`
+  - Optional, but recommended on first run.
+  - Bootstrap administrator email.
+- `ADMIN_PASSWORD`
+  - Optional, but recommended on first run.
+  - Bootstrap administrator password.
+
+#### MySQL connection variables (used when `DATABASE_PROVIDER=mysql` and `DATABASE_URL` is not set)
+
+- `MYSQL_HOST` (default: `mysql`)
+- `MYSQL_PORT` (default: `3306`)
+- `MYSQL_DATABASE` (default: `worldbuilder`)
+- `MYSQL_USER` (default: `worldbuilder`)
+- `MYSQL_PASSWORD` (default: empty)
+
+When `DATABASE_PROVIDER=mysql` and `DATABASE_URL` is not set, the container builds a MySQL URL from the `MYSQL_*` values.
 
 For SQLite in Docker, `DATABASE_URL` can be either a plain file path (for example `/app/data/worldbuilder.db`) or a Prisma-style `file:` URL (for example `file:/app/data/worldbuilder.db`).
 
@@ -79,7 +119,7 @@ environment:
   MYSQL_PASSWORD: change-me
 ```
 
-When `DATABASE_PROVIDER=mysql` and `DATABASE_URL` is not set, the container builds a MySQL URL from the `MYSQL_*` variables. Supplying `DATABASE_URL` directly is recommended for production deployments, especially when credentials contain special characters.
+Supplying `DATABASE_URL` directly is recommended for production deployments, especially when credentials contain special characters.
 
 Prisma providers are selected before Prisma Client is generated. The container selects `prisma/schema.sqlite.prisma` or `prisma/schema.mysql.prisma` from `DATABASE_PROVIDER`; Prisma does not support setting the schema `provider` property directly to an environment variable.
 
