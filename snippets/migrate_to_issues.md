@@ -1,32 +1,12 @@
-Docker Production Environment;Add the ability to run the application in a production environment via Docker;enhancement
+Add a "settings" feature for tracking application settings and preferences, including user preferences for dark mode, language, and other UI settings.
 
-Simplified Compose File;Add a simplified docker compose example for production deployment. Default options only, no advanced configuration;enhancement
+Extend the "users" feature to tracking users and their associated characters, locations, quests, items, and session notes. This will also include user permissions and roles for access control, as well as attaching what campaign they have access to.
 
-File Upload Feature;Add a file upload feature for images and other media attached to locations and characters;enhancement
+Add a "logs" feature for tracking application logs and events, including user activity, errors, and other relevant information. This will also include log filtering and searching capabilities.
 
-Extend descriptions;Add a "descriptions" field to locations and characters for long-form text;enhancement
+Add a PWA (Progressive Web App) feature for offline access. This will also include service worker implementation and caching strategies.
 
-Campaigns;Add a "campaigns" feature for tracking multiple campaigns and their associated characters, locations, and session notes;feature
-
-Worlds;Add a "worlds" feature for tracking multiple worlds and their associated campaigns, characters, locations, and session notes;feature
-
-Maps;Add a "maps" feature for tracking maps and their associated locations, characters, and session notes (linked to file upload feature).;feature
-
-Quests;Add a "quests" feature for tracking quests and their associated characters, locations, items, and session notes (linked to file upload feature).;feature
-
-Items;Add an "items" feature for tracking items and their associated characters, locations, quests, and session notes.;feature
-
-Export/Import;Add ability to export and import campaign data in JSON format for backup and sharing purposes. Potentially also include application settings for database connection, email server, and other backend settings.;feature
-
-Settings;Add a "settings" feature for tracking application settings and preferences, including user preferences for dark mode, language, and other UI settings.;feature
-
-User attachments;Extend the "users" feature to tracking users and their associated characters, locations, quests, items, and session notes. This will also include user permissions and roles for access control, as well as attaching what campaign they have access to.
-
-Application Logs;Add a "logs" feature for tracking application logs and events, including user activity, errors, and other relevant information. This will also include log filtering and searching capabilities.;enhancement
-
-PWA;Add a PWA (Progressive Web App) feature for offline access. This will also include service worker implementation and caching strategies.;enhancement
-
-Navigation tidying;Remove the "edit" pages and replace them with a single "view" page for each entity type (characters, locations, sessions, etc.). This will simplify the user interface and reduce the number of pages in the application.;enhancement
+Remove the "edit" pages and replace them with a single "view" page for each entity type (characters, locations, sessions, etc.). This will simplify the user interface and reduce the number of pages in the application.
 
 For users with write permissions, add an "edit" button (using the material edit icon) to the view page that opens a modal or separate page for editing the entity. This will allow for a more streamlined user experience and prevent accidental edits.
 
